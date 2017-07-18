@@ -1,10 +1,11 @@
 pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
---level = {x=0,y=0,width=10,height=10}
+-- sokoban
+-- by monsieurluge
 
 function _init()
-   level = levels:start(1)
+  levels:start(1,player)
 end
 
 function _update()
@@ -39,44 +40,50 @@ function _update()
 end
 
 function _draw()
-  cls()
-  draw_level(level)
-  draw_player(level.player)
+  cls(5)
+  level:draw()
+  player:draw()
 end
 
--- levels ---------------------
+-- level ----------------------
 
-levels = {}
+level={}
 
-function levels:start(lvl)
-  local level = {}
-
-  if lvl == 1 then
-    level.x = 0
-    level.y = 0
-    level.width = 7
-    level.height = 7  
+function level:draw()
+  for y=0,self.height - 1 do
+    for x=0,self.width - 1 do
+      local spt=self.content[x][y]
+      if spt.sprite > 0 then
+        spr(
+          spt.sprite,
+          x * 8,
+          y * 8
+        )
+      end
+    end
   end
-
-  self:content(level)
-
-  return level
 end
 
-function levels:content(level)
-  level.content = {}
-  for x=0,level.width -1 do
-    level.content[x] = {}
-    for y=0,level.height -1 do
-      local tile = mget(x,y)
+function level:init(def,plyr)
+  self.x=def.x
+  self.y=def.y
+  self.width=def.w
+  self.height=def.h
+  self.content={}
+  self.objects={}
+
+  self:load_content()
+  self:load_objects(plyr)
+
+  for y=0,self.height - 1 do
+    for x=0,self.width - 1 do
+      local tile=mget(x,y)
+      local object = nil
       if tile == 1 then
-        level.player = {
-          player = true,
-          position = {x=x,y=y}
-        }
+        plyr:init({x,y})
       end
       if tile == 2 then
-        level.content[x][y] = {
+        object = {
           sprite = 2,
           player = false,
           moveable = true,
@@ -85,7 +92,7 @@ function levels:content(level)
           position = {x=x,y=y}
         }
       elseif tile == 3 then
-        level.content[x][y] = {
+        object = {
           sprite = 3,
           player = false,
           moveable = true,
@@ -93,7 +100,44 @@ function levels:content(level)
           wall = false,
           position = {x=x,y=y}
         }
-      elseif tile == 4 then
+      end
+      if object then
+          add(
+          self.objects,
+          object
+        )
+      end
+    end
+  end
+end
+
+function level:load_content()
+  --todo
+end
+
+function level:load_objects(plyr)
+  --todo
+end
+
+-- levels ---------------------
+
+levels={}
+
+function levels:start(nb,plyr)
+  if nb == 1 then
+    def={x=0,y=0,w=7,h=7}
+  end
+
+  level:init(def,plyr)
+end
+
+function levels:content(level)
+  level.content = {}
+  for x=0,level.width -1 do
+    level.content[x] = {}
+    for y=0,level.height -1 do
+      local tile = mget(x,y)
+      if tile == 4 then
         level.content[x][y] = {
           sprite = 4,
           player = false,
@@ -122,24 +166,23 @@ function levels:content(level)
   end
 end
 
-function draw_level(level)
-  for y=0,level.height - 1 do
-    for x=0,level.width - 1 do
-      local sprite = level.content[x][y]
-      if sprite.sprite > 0 then
-        spr(sprite.sprite,x * 8,y * 8)
-      end
-    end
-  end
+-- player ---------------------
+
+player={}
+
+function player:init(pos)
+  self.pos=pos
 end
 
-function draw_player(player)
+function player:draw()
   spr(
     1,
-    player.position.x * 8,
-    player.position.y * 8
+    self.pos.x * 8,
+    self.pos.y * 8
   )
 end
+
+-- generic --------------------
 
 function move(sprite,delta,level)
   if can_move(sprite,delta,level) then
@@ -508,4 +551,3 @@ __music__
 00 41424344
 00 41424344
 00 41424344
-
