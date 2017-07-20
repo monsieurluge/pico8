@@ -10,32 +10,16 @@ end
 
 function _update()
   if btnp(0) then
-    move(
-      level.player,
-      {x=-1,y=0},
-      level
-    )
+    player:move_left()
   end
   if btnp(1) then
-    move(
-      level.player,
-      {x=1,y=0},
-      level
-    )
+    player:move_right()
   end
   if btnp(2) then
-    move(
-      level.player,
-      {x=0,y=-1},
-      level
-    )
+    player:move_up()
   end
   if btnp(3) then
-    move(
-      level.player,
-      {x=0,y=1},
-      level
-    )
+    player:move_down()
   end
 end
 
@@ -49,9 +33,26 @@ end
 
 level={}
 
+function level:init(def,plyr)
+  self.x=def.x
+  self.y=def.y
+  self.width=def.w
+  self.height=def.h
+  self.content={}
+  self.objects={}
+
+  self:load_static()
+  self:load_objects(plyr)
+end
+
 function level:draw()
-  for y=0,self.height - 1 do
-    for x=0,self.width - 1 do
+  self:draw_static()
+  self:draw_objects()
+end
+
+function level:draw_static()
+  for y=1,self.height do
+    for x=1,self.width do
       local spt=self.content[x][y]
       if spt.sprite > 0 then
         spr(
@@ -64,59 +65,84 @@ function level:draw()
   end
 end
 
-function level:init(def,plyr)
-  self.x=def.x
-  self.y=def.y
-  self.width=def.w
-  self.height=def.h
-  self.content={}
-  self.objects={}
+function level:draw_objects()
+  foreach(
+    self.objects,
+    function(object)
+      spr(
+        object.sprite,
+        object.pos.x * 8,
+        object.pos.y * 8
+      )
+    end
+  )
+end
 
-  self:load_content()
-  self:load_objects(plyr)
-
-  for y=0,self.height - 1 do
-    for x=0,self.width - 1 do
-      local tile=mget(x,y)
-      local object = nil
-      if tile == 1 then
-        plyr:init({x,y})
-      end
-      if tile == 2 then
-        object = {
-          sprite = 2,
-          player = false,
-          moveable = true,
-          traversable = false,
-          wall = false,
-          position = {x=x,y=y}
+function level:load_static()
+  level.content={}
+  for x=1,self.width do
+    level.content[x]={}
+    for y=1,self.height do
+      level.content[x][y]={}
+      local tile=mget(x-1,y-1)
+      if tile==4 then
+        level.content[x][y]={
+          sprite=4,
+          traversable=true,
+          switch=true
         }
-      elseif tile == 3 then
-        object = {
-          sprite = 3,
-          player = false,
-          moveable = true,
-          traversable = false,
-          wall = false,
-          position = {x=x,y=y}
+      elseif tile==5 then
+        level.content[x][y]={
+          sprite=5,
+          traversable=false,
+          switch=false
         }
-      end
-      if object then
-          add(
-          self.objects,
-          object
-        )
+      else
+        level.content[x][y]={
+          sprite=0,
+          traversable=true,
+          switch=false
+        }
       end
     end
   end
 end
 
-function level:load_content()
-  --todo
+function level:load_objects(plyr)
+  self.objects={}
+  for x=1,self.width do
+    for y=1,self.height do
+      local tile=mget(x-1,y-1)
+      if tile==1 then
+        plyr:init({x=x,y=y})
+      elseif tile==2 then
+        add(self.objects,{
+          sprite=2,
+          pos={x=x,y=y},
+          player=false
+        })
+      elseif tile==3 then
+        add(self.objects,{
+          sprite=3,
+          pos={x=x,y=y},
+          player=false
+        })
+      end
+    end
+  end
 end
 
-function level:load_objects(plyr)
-  --todo
+function level:at(pos)
+  foreach(
+    self.objects,
+    function(object)
+      if object.pos.x==pos.x
+      and object.pos.y==pos.y
+      then
+        return object
+      end
+    end
+  )
 end
 
 -- levels ---------------------
@@ -131,44 +157,11 @@ function levels:start(nb,plyr)
   level:init(def,plyr)
 end
 
-function levels:content(level)
-  level.content = {}
-  for x=0,level.width -1 do
-    level.content[x] = {}
-    for y=0,level.height -1 do
-      local tile = mget(x,y)
-      if tile == 4 then
-        level.content[x][y] = {
-          sprite = 4,
-          player = false,
-          moveable = false,
-          traversable = true,
-          wall = false
-        }
-      elseif tile == 5 then
-        level.content[x][y] = {
-          sprite = 5,
-          player = false,
-          moveable = false,
-          traversable = false,
-          wall = true
-        }
-      else
-        level.content[x][y] = {
-          sprite = 0,
-          player = false,
-          moveable = false,
-          traversable = true,
-          wall = false
-        }
-      end
-    end
-  end
-end
-
 -- player ---------------------
 
-player={}
+player={
+  player=true
+}
 
 function player:init(pos)
   self.pos=pos
@@ -182,46 +175,39 @@ function player:draw()
   )
 end
 
+function player:move_left()
+  move(self,{x=-1,y=0})
+end
+
+function player:move_right()
+  move(self,{x=1,y=0})
+end
+
+function player:move_up()
+  move(self,{x=0,y=-1})
+end
+
+function player:move_down()
+  move(self,{x=0,y=1})
+end
+
+function player:move(delta)
+  self.pos.x+=delta.x
+  self.pos.y+=delta.y
+end
+
 -- generic --------------------
 
-function move(sprite,delta,level)
-  if can_move(sprite,delta,level) then
-    if sprite.player then
-      sprite.position.x += delta.x
-      sprite.position.y += delta.y
-    else
-      local next = next_tile(sprite.position,delta,level)
-      if next.sprite == 4 then
-        sprite.sprite = 3
-        level.content[sprite.position.x][sprite.position.y] = {
-          sprite = 0,
-          player = false,
-          moveable = false,
-          traversable = true,
-          wall = false
-        }
-      else
-        sprite.sprite = 2
-        level.content[sprite.position.x][sprite.position.y] = {
-          sprite = 4,
-          player = false,
-          moveable = false,
-          traversable = true,
-          wall = false
-        }
-      end
-      sprite.position.x += delta.x
-      sprite.position.y += delta.y
-      level.content[sprite.position.x][sprite.position.y] = sprite
-    end
+function move(obj,delta)
+  if can_move(obj,delta) then
+    obj:move(delta)
   end
 end
 
-function can_move(sprite,delta,level)
-  local pos = sprite.position
-  local nextpos = {
-    x = pos.x + delta.x,
-    y = pos.y + delta.y
+function can_move(obj,delta)
+  local nextpos={
+    x=obj.pos.x + delta.x,
+    y=obj.pos.y + delta.y
   }
   if nextpos.x < 0
   or nextpos.x > level.width - 1
@@ -230,40 +216,25 @@ function can_move(sprite,delta,level)
   then
     return false
   end
-  local next = next_tile(pos,delta,level)
-  if next.wall then
+  local next=level:at(nextpos)
+  if not next.traversable then
     return false
   end
-  if next.traversable then
-    return true
-  end
-  if next.moveable then
-    if not sprite.player then
-      return false
-    end
-    if can_move(next,delta,level) then
-      move(next,delta,level)
-      return true
-    else
-      return false
-    end
-  else
-    return true
-  end
+  return true
 end
 
 function next_tile(position,delta,level)
   return level.content[position.x + delta.x][position.y + delta.y]
 end
 __gfx__
-00000000000880000000000000000000000000008888888800000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000880000088880000888800000000008888888800000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700000880000800008008080880000000008888888800000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000088008800800008008808080000880008888888800000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000808888080800008008080880000880008888888800000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700808888080800008008808080000000008888888800000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000008008000088880000888800000000008888888800000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000008008000000000000000000000000008888888800000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000880000000000000000000000000008888888808888880000000000000000000000000000000000000000000000000000000000000000000000000
+00000000008888000088880000888800000800008888888888800888088000000000000000000000000000000000000000000000000000000000000000000000
+00700700000880000800008008080880008008008888888888000088088000000000000000000000000000000000000000000000000000000000000000000000
+00077000088008800800008008808080000000808888888888000088080888800000000000000000000000000000000000000000000000000000000000000000
+00077000808888080800008008080880080000008888888888000088088080800000000000000000000000000000000000000000000000000000000000000000
+00700700800880080800008008808080008008008888888888800888088000000000000000000000000000000000000000000000000000000000000000000000
+00000000008008000088880000888800000080008888888888800888000000000000000000000000000000000000000000000000000000000000000000000000
+00000000008008000000000000000000000000008888888808888880000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -551,3 +522,4 @@ __music__
 00 41424344
 00 41424344
 00 41424344
+
