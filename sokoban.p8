@@ -25,8 +25,7 @@ end
 
 function _draw()
   cls(5)
-  level:draw()
-  player:draw()
+  level:draw(player)
 end
 
 -- level ----------------------
@@ -45,34 +44,39 @@ function level:init(def,plyr)
   self:load_objects(plyr)
 end
 
-function level:draw()
-  self:draw_static()
-  self:draw_objects()
+function level:draw(plyr)
+  local offset={
+    x=(128 - self.width * 8) / 2,
+    y=(128 - self.height * 8) / 2
+  }
+  self:draw_statics(offset)
+  self:draw_objects(offset)
+  plyr:draw(offset)
 end
 
-function level:draw_static()
+function level:draw_statics(offset)
   for y=1,self.height do
     for x=1,self.width do
       local spt=self.content[x][y]
       if spt.sprite > 0 then
         spr(
           spt.sprite,
-          x * 8,
-          y * 8
+          x * 8 + offset.x,
+          y * 8 + offset.y
         )
       end
     end
   end
 end
 
-function level:draw_objects()
+function level:draw_objects(offset)
   foreach(
     self.objects,
     function(object)
       spr(
         object.sprite,
-        object.pos.x * 8,
-        object.pos.y * 8
+        object.pos.x * 8 + offset.x,
+        object.pos.y * 8 + offset.y
       )
     end
   )
@@ -132,17 +136,29 @@ function level:load_objects(plyr)
   end
 end
 
-function level:at(pos)
-  foreach(
-    self.objects,
-    function(object)
-      if object.pos.x==pos.x
-      and object.pos.y==pos.y
-      then
-        return object
-      end
-    end
-  )
+function level:move_to(obj,delta)
+  if self:can_move(obj,delta) then
+    obj:move(delta)
+  end
+end
+
+function level:can_move(obj,delta)
+  local nextpos = {
+    x=obj.pos.x + delta.x,
+    y=obj.pos.y + delta.y,
+  }
+  if nextpos.x < 1
+  or nextpos.x > self.width
+  or nextpos.y < 1
+  or nextpos.y > self.height
+  then
+    return false
+  end
+  local nexttile=self.content[nextpos.x][nextpos.y]
+  if not nexttile.traversable then
+    return false
+  end
+  return true
 end
 
 -- levels ---------------------
@@ -167,28 +183,28 @@ function player:init(pos)
   self.pos=pos
 end
 
-function player:draw()
+function player:draw(offset)
   spr(
     1,
-    self.pos.x * 8,
-    self.pos.y * 8
+    self.pos.x * 8 + offset.x,
+    self.pos.y * 8 + offset.y
   )
 end
 
 function player:move_left()
-  move(self,{x=-1,y=0})
+  level:move_to(self,{x=-1,y=0})
 end
 
 function player:move_right()
-  move(self,{x=1,y=0})
+  level:move_to(self,{x=1,y=0})
 end
 
 function player:move_up()
-  move(self,{x=0,y=-1})
+  level:move_to(self,{x=0,y=-1})
 end
 
 function player:move_down()
-  move(self,{x=0,y=1})
+  level:move_to(self,{x=0,y=1})
 end
 
 function player:move(delta)
@@ -196,36 +212,6 @@ function player:move(delta)
   self.pos.y+=delta.y
 end
 
--- generic --------------------
-
-function move(obj,delta)
-  if can_move(obj,delta) then
-    obj:move(delta)
-  end
-end
-
-function can_move(obj,delta)
-  local nextpos={
-    x=obj.pos.x + delta.x,
-    y=obj.pos.y + delta.y
-  }
-  if nextpos.x < 0
-  or nextpos.x > level.width - 1
-  or nextpos.y < 0
-  or nextpos.y > level.height - 1
-  then
-    return false
-  end
-  local next=level:at(nextpos)
-  if not next.traversable then
-    return false
-  end
-  return true
-end
-
-function next_tile(position,delta,level)
-  return level.content[position.x + delta.x][position.y + delta.y]
-end
 __gfx__
 00000000000880000000000000000000000000008888888808888880000000000000000000000000000000000000000000000000000000000000000000000000
 00000000008888000088880000888800000800008888888888800888088000000000000000000000000000000000000000000000000000000000000000000000
