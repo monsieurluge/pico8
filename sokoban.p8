@@ -44,6 +44,50 @@ function level:init(def,plyr)
   self:load_objects(plyr)
 end
 
+function level:add_move_to(obj)
+  function obj:move(delta)
+    self.pos.x+=delta.x
+    self.pos.y+=delta.y
+  end
+end
+
+function level:at(pos)
+  for k,v in pairs(self.objects) do
+    if v.pos.x==pos.x
+    and v.pos.y==pos.y
+    then
+      return v
+    end
+  end
+  return nil
+end
+
+function level:can_move(obj,delta)
+  local nextpos = {
+    x=obj.pos.x + delta.x,
+    y=obj.pos.y + delta.y,
+  }
+  if (not self:in_bounds(nextpos)) return false
+  local nexttile=self.content[nextpos.x][nextpos.y]
+  if not nexttile.traversable then
+    return false
+  end
+  local nextobj=self:at(nextpos)
+  if nextobj==nil then
+    return true
+  elseif obj.player then
+    if self:can_move(nextobj,delta) then
+      self:move_to(nextobj,delta)
+      return true
+    else
+      return false
+    end
+  else
+    return false
+  end
+  return true
+end
+
 function level:draw(plyr)
   local offset={
     x=(128 - self.width * 8) / 2,
@@ -82,6 +126,13 @@ function level:draw_objects(offset)
   )
 end
 
+function level:in_bounds(pos)
+  return pos.x >= 1
+    and pos.x <= self.width
+    and pos.y >= 1
+    and pos.y <= self.height
+end
+
 function level:load_static()
   level.content={}
   for x=1,self.width do
@@ -116,21 +167,29 @@ function level:load_objects(plyr)
   self.objects={}
   for x=1,self.width do
     for y=1,self.height do
-      local tile=mget(x-1,y-1)
-      if tile==1 then
+      local target=mget(x-1,y-1)
+      local obj=nil
+      if target==1 then
         plyr:init({x=x,y=y})
-      elseif tile==2 then
-        add(self.objects,{
+        self:add_move_to(plyr)
+      end
+      if target==2 then
+        obj={
           sprite=2,
           pos={x=x,y=y},
           player=false
-        })
-      elseif tile==3 then
-        add(self.objects,{
+        }
+      end
+      if target==3 then
+        obj={
           sprite=3,
           pos={x=x,y=y},
           player=false
-        })
+        }
+      end
+      if obj!=nil then
+        self:add_move_to(obj)
+        add(self.objects,obj)
       end
     end
   end
@@ -140,25 +199,6 @@ function level:move_to(obj,delta)
   if self:can_move(obj,delta) then
     obj:move(delta)
   end
-end
-
-function level:can_move(obj,delta)
-  local nextpos = {
-    x=obj.pos.x + delta.x,
-    y=obj.pos.y + delta.y,
-  }
-  if nextpos.x < 1
-  or nextpos.x > self.width
-  or nextpos.y < 1
-  or nextpos.y > self.height
-  then
-    return false
-  end
-  local nexttile=self.content[nextpos.x][nextpos.y]
-  if not nexttile.traversable then
-    return false
-  end
-  return true
 end
 
 -- levels ---------------------
@@ -205,11 +245,6 @@ end
 
 function player:move_down()
   level:move_to(self,{x=0,y=1})
-end
-
-function player:move(delta)
-  self.pos.x+=delta.x
-  self.pos.y+=delta.y
 end
 
 __gfx__
@@ -508,4 +543,3 @@ __music__
 00 41424344
 00 41424344
 00 41424344
-
