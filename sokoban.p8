@@ -51,6 +51,10 @@ function game:init()
   self.state="play"
 end
 
+-- tiles ----------------------
+
+walls={5,6,19,20,21,22,36,37,38}
+
 -- level ----------------------
 
 level={}
@@ -179,9 +183,9 @@ function level:load_static()
           traversable=true,
           switch=true
         }
-      elseif tile==5 then
+      elseif self:is_wall(tile) then
         level.content[x][y]={
-          sprite=5,
+          sprite=tile,
           traversable=false,
           switch=false
         }
@@ -194,6 +198,13 @@ function level:load_static()
       end
     end
   end
+end
+
+function level:is_wall(tile)
+  for nb in all(walls) do
+    if (nb==tile) return true
+  end
+  return false
 end
 
 function level:load_objects(plyr)
