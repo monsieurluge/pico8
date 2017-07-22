@@ -5,7 +5,21 @@ __lua__
 -- by monsieurluge
 
 function _init()
-  levels:start(1,player)
+  menuitem(
+    1,
+    "restart level",
+    function()
+      levels:start(
+        game.level,
+        player
+      )
+    end
+  )
+  game:init()
+  levels:start(
+    game.level,
+    player
+  )
 end
 
 function _update()
@@ -26,6 +40,15 @@ end
 function _draw()
   cls(5)
   level:draw(player)
+end
+
+-- game -----------------------
+
+game={}
+
+function game:init()
+  self.level=1
+  self.state="play"
 end
 
 -- level ----------------------
@@ -568,3 +591,4 @@ __music__
 00 41424344
 00 41424344
 00 41424344
+
