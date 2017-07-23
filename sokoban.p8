@@ -62,7 +62,11 @@ function level:add_move(obj)
       y=self.pos.y + delta.y
     }
     obj.pos=newpos
-    obj.object:moved_on(obj,level:tile_at(newpos))
+    obj.target:moved_on(
+      obj,
+      level:tile_at(newpos),
+      level:item_at(newpos)
+    )
   end
 end
 
@@ -78,8 +82,7 @@ function level:at(pos)
 end
 
 function level:can_move(obj,delta,pow)
-  if (not obj.moveable) return false
-  if (pow<0) return false
+  if (not obj.moveable or pow<0) return false
   local nextpos = {
     x=obj.pos.x + delta.x,
     y=obj.pos.y + delta.y,
@@ -91,6 +94,7 @@ function level:can_move(obj,delta,pow)
   end
   local nextobj=self:at(nextpos)
   if (nextobj==nil) return true
+  if (nextobj.item and obj.player) return true
   if self:can_move(nextobj,delta,pow-1) then
     nextobj:move(delta)
     return true
@@ -135,7 +139,7 @@ function level:draw_objects(offset)
   foreach(
     self.objects,
     function(obj)
-      obj.object:draw(
+      obj.target:draw(
         obj,
         {
           x=(obj.pos.x-1) * 8 + offset.x,
@@ -151,6 +155,31 @@ function level:in_bounds(pos)
     and pos.x <= self.width
     and pos.y >= 1
     and pos.y <= self.height
+end
+
+function level:is_exit(tile)
+  for nb in all(exits) do
+    if (nb==tile) return true
+  end
+  return false
+end
+
+function level:is_wall(tile)
+  for nb in all(walls) do
+    if (nb==tile) return true
+  end
+  return false
+end
+
+function level:item_at(pos)
+  for o in all(self.objects) do
+    if o.pos.x == pos.x
+    and o.pos.y == pos.y
+    and o.item then
+      return o
+    end
+  end
+  return nil
 end
 
 function level:load_static()
@@ -192,20 +221,6 @@ function level:load_static()
   end
 end
 
-function level:is_exit(tile)
-  for nb in all(exits) do
-    if (nb==tile) return true
-  end
-  return false
-end
-
-function level:is_wall(tile)
-  for nb in all(walls) do
-    if (nb==tile) return true
-  end
-  return false
-end
-
 function level:load_objects()
   self.objects={}
   for x=1,self.width do
@@ -214,21 +229,22 @@ function level:load_objects()
       local obj=nil
       if target==1 then
         obj={
-          object=player,
-          moveable=true
+          target=player,
+          moveable=true,
+          player=true
         }
         player:orig(obj)
       end
       if target==2 or target==3 then
         obj={
-          object=stone,
+          target=stone,
           moveable=true,
           on_switch=(target==3)
         }
       end
       if target==7 then
         obj={
-          object=key,
+          target=key,
           moveable=true,
           item=true
         }
@@ -277,6 +293,56 @@ function key:moved_on(orig,tile)
   --todo
 end
 
+-- object:player --------------
+
+player={}
+
+function player:init()
+  self.inventory={}
+end
+
+function player:draw(orig,pos)
+  spr(1,pos.x,pos.y)
+end
+
+function player:draw_inventory()
+  nb=0
+  for item in all(self.inventory) do
+    spr(39,nb * 9 + 1,119)
+    item.target:draw(item,{x=nb * 9 + 1,y=119})
+    nb+=1
+  end
+end
+
+function player:move_left()
+  level:move_to(self.orig,{x=-1,y=0},1)
+end
+
+function player:move_right()
+  level:move_to(self.orig,{x=1,y=0},1)
+end
+
+function player:move_up()
+  level:move_to(self.orig,{x=0,y=-1},1)
+end
+
+function player:move_down()
+  level:move_to(self.orig,{x=0,y=1},1)
+end
+
+function player:moved_on(orig,tile,item)
+  if (item) self:take(item)
+end
+
+function player:orig(obj)
+  self.orig=obj
+end
+
+function player:take(item)
+  add(self.inventory,item)
+  del(level.objects,item)
+end
+
 -- object:stone ---------------
 
 stone={}
@@ -299,59 +365,6 @@ function stone:moved_on(orig,tile)
   else
     orig.on_switch=false
   end
-end
-
--- object:player --------------
-
-player={}
-
-function player:init()
-  self.inventory={}
-end
-
-function player:draw(orig,pos)
-  spr(1,pos.x,pos.y)
-end
-
-function player:draw_inventory()
-  nb=0
-  for item in all(self.inventory) do
-    spr(39,nb * 9 + 1,119)
-    spr(
-      item.sprite,
-      nb * 9 + 1,
-      119
-    )
-    nb+=1
-  end
-end
-
-function player:move_left()
-  level:move_to(self.orig,{x=-1,y=0},1)
-end
-
-function player:move_right()
-  level:move_to(self.orig,{x=1,y=0},1)
-end
-
-function player:move_up()
-  level:move_to(self.orig,{x=0,y=-1},1)
-end
-
-function player:move_down()
-  level:move_to(self.orig,{x=0,y=1},1)
-end
-
-function player:moved_on(tile)
-  --todo
-end
-
-function player:orig(obj)
-  self.orig=obj
-end
-
-function player:take(item)
-  add(self.inventory,item)
 end
 
 -- tiles ----------------------
