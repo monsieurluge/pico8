@@ -6,10 +6,6 @@ __lua__
 
 function _init()
   game:init()
-  levels:start(
-    game.level,
-    player
-  )
 end
 
 function _update()
@@ -29,7 +25,7 @@ end
 
 function _draw()
   cls(8)
-  level:draw(player)
+  level:draw()
 end
 
 -- game -----------------------
@@ -39,13 +35,15 @@ game={}
 function game:init()
   self.level=1
   self.state="play"
+  player:init()
+  levels:start(self.level)
 end
 
 -- level ----------------------
 
 level={}
 
-function level:init(def,plyr)
+function level:init(def)
   self.x=def.x
   self.y=def.y
   self.width=def.w
@@ -53,19 +51,18 @@ function level:init(def,plyr)
   self.switches=0
   self.content={}
   self.objects={}
-
   self:load_static()
-  self:load_objects(plyr)
+  self:load_objects()
 end
 
-function level:add_move_to(obj)
+function level:add_move(obj)
   function obj:move(delta)
     local newpos={
       x=self.pos.x + delta.x,
       y=self.pos.y + delta.y
     }
     obj.pos=newpos
-    obj:moved_on(level:tile_at(newpos))
+    obj.object:moved_on(obj,level:tile_at(newpos))
   end
 end
 
@@ -80,8 +77,9 @@ function level:at(pos)
   return nil
 end
 
-function level:can_move(obj,delta)
+function level:can_move(obj,delta,pow)
   if (not obj.moveable) return false
+  if (pow<0) return false
   local nextpos = {
     x=obj.pos.x + delta.x,
     y=obj.pos.y + delta.y,
@@ -92,22 +90,16 @@ function level:can_move(obj,delta)
     return false
   end
   local nextobj=self:at(nextpos)
-  if nextobj==nil then
+  if (nextobj==nil) return true
+  if self:can_move(nextobj,delta,pow-1) then
+    nextobj:move(delta)
     return true
-  elseif obj.player then
-    if self:can_move(nextobj,delta) then
-      self:move_to(nextobj,delta)
-      return true
-    else
-      return false
-    end
   else
     return false
   end
-  return true
 end
 
-function level:draw(plyr)
+function level:draw()
   local offset={
     x=(128 - self.width * 8) / 2,
     y=(128 - self.height * 8) / 2
@@ -121,9 +113,7 @@ function level:draw(plyr)
   )
   self:draw_statics(offset)
   self:draw_objects(offset)
-  plyr:draw(offset)
-  plyr:draw_inventory(offset)
-  print(self.switches,2,2)
+  player:draw_inventory()
 end
 
 function level:draw_statics(offset)
@@ -144,11 +134,13 @@ end
 function level:draw_objects(offset)
   foreach(
     self.objects,
-    function(object)
-      spr(
-        object.sprite,
-        (object.pos.x-1) * 8 + offset.x,
-        (object.pos.y-1) * 8 + offset.y
+    function(obj)
+      obj.object:draw(
+        obj,
+        {
+          x=(obj.pos.x-1) * 8 + offset.x,
+          y=(obj.pos.y-1) * 8 + offset.y
+        }
       )
     end
   )
@@ -214,54 +206,44 @@ function level:is_wall(tile)
   return false
 end
 
-function level:load_objects(plyr)
+function level:load_objects()
   self.objects={}
   for x=1,self.width do
     for y=1,self.height do
       local target=mget(x-1,y-1)
       local obj=nil
       if target==1 then
-        plyr:init({x=x,y=y})
-        self:add_move_to(plyr)
+        obj={
+          object=player,
+          moveable=true
+        }
+        player:orig(obj)
       end
       if target==2 or target==3 then
         obj={
-          sprite=target,
-          pos={x=x,y=y},
+          object=stone,
           moveable=true,
-          player=false
+          on_switch=(target==3)
         }
-        function obj:moved_on(tile)
-          if self.sprite==3 then
-            level.switches+=1
-          end
-          if tile.switch then
-            self.sprite=3
-            level.switches-=1
-          else
-            self.sprite=2
-          end
-        end
       end
       if target==7 then
         obj={
-          sprite=target,
-          pos={x=x,y=y},
-          moveable=false,
-          item=true,
-          player=false
+          object=key,
+          moveable=true,
+          item=true
         }
       end
       if obj!=nil then
-        self:add_move_to(obj)
+        obj.pos={x=x,y=y}
+        self:add_move(obj)
         add(self.objects,obj)
       end
     end
   end
 end
 
-function level:move_to(obj,delta)
-  if self:can_move(obj,delta) then
+function level:move_to(obj,delta,pow)
+  if self:can_move(obj,delta,pow) then
     obj:move(delta)
   end
 end
@@ -275,32 +257,56 @@ end
 
 levels={}
 
-function levels:start(nb,plyr)
+function levels:start(nb)
   if nb == 1 then
     def={x=0,y=0,w=7,h=7}
   end
 
-  level:init(def,plyr)
+  level:init(def)
 end
 
--- player ---------------------
+-- object:key -----------------
 
-player={
-  player=true,
-  moveable=true,
-  inventory={}
-}
+key={}
 
-function player:init(pos)
-  self.pos=pos
+function key:draw(orig,pos)
+  spr(7,pos.x,pos.y)
 end
 
-function player:draw(offset)
-  spr(
-    1,
-    (self.pos.x - 1) * 8 + offset.x,
-    (self.pos.y - 1) * 8 + offset.y
-  )
+-- object:stone ---------------
+
+stone={}
+
+function stone:draw(orig,pos)
+  if orig.on_switch then
+    spr(3,pos.x,pos.y)
+  else
+    spr(2,pos.x,pos.y)
+  end
+end
+
+function stone:moved_on(orig,tile)
+  if orig.on_switch then
+    level.switches+=1
+  end
+  if tile.switch then
+    orig.on_switch=true
+    level.switches-=1
+  else
+    orig.on_switch=false
+  end
+end
+
+-- object:player --------------
+
+player={}
+
+function player:init()
+  self.inventory={}
+end
+
+function player:draw(orig,pos)
+  spr(1,pos.x,pos.y)
 end
 
 function player:draw_inventory()
@@ -317,23 +323,27 @@ function player:draw_inventory()
 end
 
 function player:move_left()
-  level:move_to(self,{x=-1,y=0})
+  level:move_to(self.orig,{x=-1,y=0},1)
 end
 
 function player:move_right()
-  level:move_to(self,{x=1,y=0})
+  level:move_to(self.orig,{x=1,y=0},1)
 end
 
 function player:move_up()
-  level:move_to(self,{x=0,y=-1})
+  level:move_to(self.orig,{x=0,y=-1},1)
 end
 
 function player:move_down()
-  level:move_to(self,{x=0,y=1})
+  level:move_to(self.orig,{x=0,y=1},1)
 end
 
 function player:moved_on(tile)
   --todo
+end
+
+function player:orig(obj)
+  self.orig=obj
 end
 
 function player:take(item)
