@@ -273,6 +273,10 @@ function key:draw(orig,pos)
   spr(7,pos.x,pos.y)
 end
 
+function key:moved_on(orig,tile)
+  --todo
+end
+
 -- object:stone ---------------
 
 stone={}
