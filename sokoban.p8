@@ -4,8 +4,11 @@ __lua__
 -- sokoban
 -- by monsieurluge
 
+room=1
+-- state="play"
+
 function _init()
-  game:init()
+  levels:start(room)
 end
 
 function _update()
@@ -24,34 +27,21 @@ function _update()
 end
 
 function _draw()
-  cls(1)
   level:draw()
-end
-
--- game -----------------------
-
-game={}
-
-function game:init()
-  self.level=1
-  self.state="play"
-  player:init()
-  levels:start(self.level)
 end
 
 -- global functions -----------
 
 function add_move(obj)
-  function obj:move(delta)
-    local newpos={
-      x=self.pos.x + delta.x,
-      y=self.pos.y + delta.y
-    }
-    obj.pos=newpos
+  function obj:move(dx,dy)
+    local nx=self.x + dx
+    local ny=self.y + dy
+    obj.x=nx
+    obj.y=ny
     obj.target:moved_on(
       obj,
-      level:tile_at(newpos),
-      level:object_at(newpos)
+      level:tile_at(nx,ny),
+      level:object_at(nx,ny)
     )
   end
 end
@@ -73,34 +63,30 @@ function level:init(def,from)
   self:load_objects(def.exits,from)
 end
 
-function level:at(pos)
+function level:at(x,y)
   for k,v in pairs(self.objects) do
-    if v.pos.x==pos.x
-    and v.pos.y==pos.y
-    then
+    if v.x==x and v.y==y then
       return v
     end
   end
   return nil
 end
 
-function level:can_move(obj,delta,pow)
+function level:can_move(obj,dx,dy,pow)
   if (not obj.moveable or pow<0) return false
-  local nextpos = {
-    x=obj.pos.x + delta.x,
-    y=obj.pos.y + delta.y,
-  }
-  if (not self:in_bounds(nextpos)) return false
-  local nexttile=self:tile_at(nextpos)
+  local nx=obj.x + dx
+  local ny=obj.y + dy
+  if (not self:in_bounds(nx,ny)) return false
+  local nexttile=self:tile_at(nx,ny)
   if not nexttile.traversable then
     return false
   end
-  local nextobj=self:at(nextpos)
+  local nextobj=self:at(nx,ny)
   if (nextobj==nil) return true
   if (nextobj.traversable) return true
   if (nextobj.item and obj.is_player) return true
-  if self:can_move(nextobj,delta,pow-1) then
-    nextobj:move(delta)
+  if self:can_move(nextobj,dx,dy,pow-1) then
+    nextobj:move(dx,dy)
     return true
   else
     return false
@@ -108,57 +94,54 @@ function level:can_move(obj,delta,pow)
 end
 
 function level:draw()
-  local offset={
-    x=(128 - self.width * 8) / 2,
-    y=(128 - self.height * 8) / 2
-  }
+  local ox=64 - self.width * 4
+  local oy=64 - self.height * 4
+  cls(1)
   rectfill(
-    offset.x,
-    offset.y,
-    offset.x + self.width * 8 - 1,
-    offset.y + self.height * 8 - 1,
+    ox,
+    oy,
+    ox + self.width * 8 - 1,
+    oy + self.height * 8 - 1,
     5
   )
-  self:draw_statics(offset)
-  self:draw_objects(offset)
+  self:draw_statics(ox,oy)
+  self:draw_objects(ox,oy)
   player:draw_inventory()
 end
 
-function level:draw_statics(offset)
+function level:draw_objects(ox,oy)
+  foreach(
+    self.objects,
+    function(obj)
+      obj.target:draw(
+        obj,
+        (obj.x-1) * 8 + ox,
+        (obj.y-1) * 8 + oy
+      )
+    end
+  )
+end
+
+function level:draw_statics(ox,oy)
   for y=1,self.height do
     for x=1,self.width do
-      local spt=self.content[x][y]
-      if spt.sprite > 0 then
+      local sprite=self.content[x][y].sprite
+      if sprite > 0 then
         spr(
-          spt.sprite,
-          (x-1) * 8 + offset.x,
-          (y-1) * 8 + offset.y
+          sprite,
+          (x-1) * 8 + ox,
+          (y-1) * 8 + oy
         )
       end
     end
   end
 end
 
-function level:draw_objects(offset)
-  foreach(
-    self.objects,
-    function(obj)
-      obj.target:draw(
-        obj,
-        {
-          x=(obj.pos.x-1) * 8 + offset.x,
-          y=(obj.pos.y-1) * 8 + offset.y
-        }
-      )
-    end
-  )
-end
-
-function level:in_bounds(pos)
-  return pos.x >= 1
-    and pos.x <= self.width
-    and pos.y >= 1
-    and pos.y <= self.height
+function level:in_bounds(x,y)
+  return x >= 1
+    and x <= self.width
+    and y >= 1
+    and y <= self.height
 end
 
 function level:is_exit(tile)
@@ -173,17 +156,6 @@ function level:is_wall(tile)
     if (nb==tile) return true
   end
   return false
-end
-
-function level:object_at(pos)
-  for o in all(self.objects) do
-    if o.pos.x == pos.x
-    and o.pos.y == pos.y
-    then
-      return o
-    end
-  end
-  return nil
 end
 
 function level:load_static()
@@ -229,29 +201,25 @@ function level:load_objects(exits,from)
           is_player=true,
         }
         player:new(obj)
-      end
-      if target==2 or target==3 then
+      elseif target==2 or target==3 then
         obj={
           target=stone,
           moveable=true,
           on_switch=(target==3)
         }
-      end
-      if target==6 then
-        obj={
-          target=key,
-          moveable=true,
-          item=true
-        }
-      end
-      if target==5 then
+      elseif target==5 then
         obj={
           target=pbracelet,
           moveable=true,
           item=true
         }
-      end
-      if self:is_exit(target) then
+      elseif target==6 then
+        obj={
+          target=key,
+          moveable=true,
+          item=true
+        }
+      elseif self:is_exit(target) then
         obj={
           target=exit,
           traversable=true,
@@ -263,10 +231,11 @@ function level:load_objects(exits,from)
         }
         if from==obj.next_exit then
           local plyr={
-            target=player,
-            moveable=true,
+            x=x,
+            y=y,
             is_player=true,
-            pos={x=x,y=y}
+            moveable=true,
+            target=player
           }
           player:new(plyr)
           add_move(plyr)
@@ -274,7 +243,8 @@ function level:load_objects(exits,from)
         end
       end
       if obj!=nil then
-        obj.pos={x=x,y=y}
+        obj.x=x
+        obj.y=y
         add_move(obj)
         add(self.objects,obj)
       end
@@ -282,15 +252,26 @@ function level:load_objects(exits,from)
   end
 end
 
-function level:move_to(obj,delta,pow)
-  if self:can_move(obj,delta,pow) then
-    obj:move(delta)
+function level:move_to(obj,dx,dy,pow)
+  if self:can_move(obj,dx,dy,pow) then
+    obj:move(dx,dy)
   end
 end
 
-function level:tile_at(pos)
-  if (not self:in_bounds(pos)) return nil
-  return self.content[pos.x][pos.y]
+function level:object_at(x,y)
+  for o in all(self.objects) do
+    if o.x==x and o.y==y then
+      return o
+    end
+  end
+  return nil
+end
+
+function level:tile_at(x,y)
+  if self:in_bounds(x,y) then
+    return self.content[x][y]
+  end
+  return nil
 end
 
 -- levels ---------------------
@@ -314,8 +295,8 @@ end
 
 exit={}
 
-function exit:draw(orig,pos)
-  spr(orig.sprite,pos.x,pos.y)
+function exit:draw(orig,x,y)
+  spr(orig.sprite,x,y)
 end
 
 function exit:go(orig)
@@ -347,8 +328,8 @@ end
 
 key={}
 
-function key:draw(orig,pos)
-  spr(6,pos.x,pos.y)
+function key:draw(orig,x,y)
+  spr(6,x,y)
 end
 
 function key:moved_on(orig,tile)
@@ -360,44 +341,41 @@ end
 -- object:player --------------
 
 player={
+  inventory={},
   pow=1
 }
 
-function player:init()
-  self.inventory={}
-end
-
-function player:increase_pow(value)
-  self.pow+=value
-end
-
-function player:draw(orig,pos)
-  spr(1,pos.x,pos.y)
+function player:draw(orig,x,y)
+  spr(1,x,y)
 end
 
 function player:draw_inventory()
   nb=0
   for item in all(self.inventory) do
     spr(39,nb * 9 + 1,119)
-    item.target:draw(item,{x=nb * 9 + 1,y=119})
+    item.target:draw(item,nb * 9 + 1,119)
     nb+=1
   end
 end
 
+function player:increase_pow(value)
+  self.pow+=value
+end
+
 function player:move_left()
-  level:move_to(self.orig,{x=-1,y=0},self.pow)
+  level:move_to(self.orig,-1,0,self.pow)
 end
 
 function player:move_right()
-  level:move_to(self.orig,{x=1,y=0},self.pow)
+  level:move_to(self.orig,1,0,self.pow)
 end
 
 function player:move_up()
-  level:move_to(self.orig,{x=0,y=-1},self.pow)
+  level:move_to(self.orig,0,-1,self.pow)
 end
 
 function player:move_down()
-  level:move_to(self.orig,{x=0,y=1},self.pow)
+  level:move_to(self.orig,0,1,self.pow)
 end
 
 function player:moved_on(orig,tile,object)
@@ -419,8 +397,8 @@ end
 
 pbracelet={}
 
-function pbracelet:draw(orig,pos)
-  spr(5,pos.x,pos.y)
+function pbracelet:draw(orig,x,y)
+  spr(5,x,y)
 end
 
 function pbracelet:moved_on(orig,tile)
@@ -434,11 +412,11 @@ end
 
 stone={}
 
-function stone:draw(orig,pos)
+function stone:draw(orig,x,y)
   if orig.on_switch then
-    spr(3,pos.x,pos.y)
+    spr(3,x,y)
   else
-    spr(2,pos.x,pos.y)
+    spr(2,x,y)
   end
 end
 
@@ -603,10 +581,10 @@ __map__
 1717003425253435362525360000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 1717000034352525253536000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 1700001717173422360000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-1717001700000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+1717001706000002000005000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 1717171717030000000300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000003000001000003000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000003050001000603000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
