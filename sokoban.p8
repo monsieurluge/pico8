@@ -28,7 +28,6 @@ end
 function _draw()
   level:draw()
   color(12)
-  print("lvl"..room.nb)
   foreach(
     level.objects,
     function(obj)
@@ -53,7 +52,6 @@ function add_move(obj)
     obj.y=ny
     obj.target:moved_on(
       obj,
-      level:tile_at(nx,ny),
       level:object_at(nx,ny)
     )
   end
@@ -72,8 +70,7 @@ function level:init(from)
   self.switches=0
   self.content={}
   self.objects={}
-  self:load_static()
-  self:load_objects(room.exits,from)
+  self:load_obj(room.exits,from)
 end
 
 function level:at(x,y)
@@ -90,10 +87,6 @@ function level:can_move(obj,dx,dy,pow)
   local nx=obj.x+dx
   local ny=obj.y+dy
   if (not self:in_bounds(nx,ny)) return false
-  local nexttile=self:tile_at(nx,ny)
-  if not nexttile.traversable then
-    return false
-  end
   local nextobj=self:at(nx,ny)
   if (nextobj==nil) return true
   if (nextobj.traversable) return true
@@ -113,33 +106,22 @@ function level:draw()
   rectfill(
     ox,oy,ox+self.width*8-1,oy+self.height*8-1,5
   )
-  self:draw_statics(ox,oy)
+  self:draw_objects(ox,oy,true)
   self:draw_objects(ox,oy)
   player:draw_inventory()
 end
 
-function level:draw_objects(ox,oy)
+function level:draw_objects(ox,oy,bg)
   foreach(
     self.objects,
     function(obj)
-      obj.target:draw(
-        obj,(obj.x-1)*8+ox,(obj.y-1)*8+oy
-      )
-    end
-  )
-end
-
-function level:draw_statics(ox,oy)
-  for y=1,self.height do
-    for x=1,self.width do
-      local sprite=self.content[x][y].sprite
-      if sprite > 0 then
-        spr(
-          sprite,(x-1)*8+ox,(y-1)*8+oy
+      if bg==obj.target.bg then
+        obj.target:draw(
+          obj,(obj.x-1)*8+ox,(obj.y-1)*8+oy
         )
       end
     end
-  end
+  )
 end
 
 function level:in_bounds(x,y)
@@ -163,66 +145,16 @@ function level:is_wall(tile)
   return false
 end
 
-function level:load_static()
-  level.content={}
-  for x=1,self.width do
-    level.content[x]={}
-    for y=1,self.height do
-      level.content[x][y]={}
-      local tile=mget(x-1+self.x,y-1+self.y)
-      if tile==3 or tile==4 then
-        if tile==4 then
-          self.switches+=1
-        end
-        level.content[x][y]={
-          sprite=4,
-          traversable=true,
-          switch=true
-        }
-      elseif self:is_wall(tile) then
-        level.content[x][y]={
-          sprite=tile
-        }
-      else
-        level.content[x][y]={
-          sprite=0,
-          traversable=true
-        }
-      end
-    end
-  end
-end
-
-function level:load_objects(exits,from)
+function level:load_obj(exits,from)
   self.objects={}
   for x=1,self.width do
     for y=1,self.height do
       local target=mget(x-1+self.x,y-1+self.y)
       local obj=nil
-      if target==1 then
+      if self:is_wall(target) then
         obj={
-          target=player,
-          moveable=true,
-          is_player=true,
-        }
-        player:new(obj)
-      elseif target==2 or target==3 then
-        obj={
-          target=stone,
-          moveable=true,
-          on_switch=(target==3)
-        }
-      elseif target==5 then
-        obj={
-          target=pbracelet,
-          moveable=true,
-          item=true
-        }
-      elseif target==6 then
-        obj={
-          target=key,
-          moveable=true,
-          item=true
+          target=wall,
+          sprite=target
         }
       elseif self:is_exit(target) then
         obj={
@@ -246,6 +178,36 @@ function level:load_objects(exits,from)
           add_move(plyr)
           add(self.objects,plyr)
         end
+      elseif target==1 then
+        obj={
+          target=player,
+          moveable=true,
+          is_player=true
+        }
+        player:new(obj)
+      elseif target==2 or target==3 then
+        obj={
+          target=stone,
+          moveable=true,
+          on_switch=(target==3)
+        }
+      elseif target==4 then
+        obj={
+          target=switch,
+          traversable=true
+        }
+      elseif target==5 then
+        obj={
+          target=pbracelet,
+          moveable=true,
+          item=true
+        }
+      elseif target==6 then
+        obj={
+          target=key,
+          moveable=true,
+          item=true
+        }
       end
       if obj!=nil then
         obj.x=x
@@ -272,16 +234,9 @@ function level:object_at(x,y)
   return nil
 end
 
-function level:tile_at(x,y)
-  if self:in_bounds(x,y) then
-    return self.content[x][y]
-  end
-  return nil
-end
-
 -- object:exit ----------------
 
-exit={}
+exit={bg=true}
 
 function exit:draw(orig,x,y)
   spr(orig.sprite,x,y)
@@ -314,13 +269,13 @@ end
 
 -- object:key -----------------
 
-key={}
+key={name="key"}
 
 function key:draw(orig,x,y)
   spr(6,x,y)
 end
 
-function key:moved_on(orig,tile)
+function key:moved_on()
 end
 
 function key:taken(obj)
@@ -329,6 +284,7 @@ end
 -- object:player --------------
 
 player={
+  name="plyr",
   inventory={},
   pow=1
 }
@@ -366,9 +322,9 @@ function player:move_down()
   level:move_to(self.orig,0,1,self.pow)
 end
 
-function player:moved_on(orig,tile,object)
-  if (object.item) self:take(object)
-  if (object.exit) object.target:go(object)
+function player:moved_on(orig,obj)
+  if (obj.item) self:take(obj)
+  if (obj.exit) obj.target:go(obj)
 end
 
 function player:new(obj)
@@ -383,13 +339,13 @@ end
 
 -- object:power bracelet ------
 
-pbracelet={}
+pbracelet={name="pbclt"}
 
 function pbracelet:draw(orig,x,y)
   spr(5,x,y)
 end
 
-function pbracelet:moved_on(orig,tile)
+function pbracelet:moved_on()
 end
 
 function pbracelet:taken(obj)
@@ -398,7 +354,7 @@ end
 
 -- object:stone ---------------
 
-stone={}
+stone={name="stone"}
 
 function stone:draw(orig,x,y)
   if orig.on_switch then
@@ -408,16 +364,32 @@ function stone:draw(orig,x,y)
   end
 end
 
-function stone:moved_on(orig,tile)
+function stone:moved_on(orig,obj)
   if orig.on_switch then
     level.switches+=1
   end
-  if tile.switch then
+  if obj.switch then
     orig.on_switch=true
     level.switches-=1
   else
     orig.on_switch=false
   end
+end
+
+-- object:switch -------------
+
+switch={bg=true}
+
+function switch:draw(orig,x,y)
+  spr(4,x,y)
+end
+
+-- object:wall ---------------
+
+wall={bg=true}
+
+function wall:draw(orig,x,y)
+  spr(orig.sprite,x,y)
 end
 
 -- rooms ---------------------
@@ -582,9 +554,9 @@ __map__
 0000000000000000000000000000002525252535250000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000002622242610240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000002610343602240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000001403160000000000002610101000340000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000001714153435361516000000002531313202200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000001424022525250226160000002608010005140000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000001403160000000000002610011000340000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000001714153435361516000000002531320002200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000001424022525250226160000002608000005140000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000002434352525253536260000002515161214250000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 1717003425253435362525360000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 1717000034352525253536000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
