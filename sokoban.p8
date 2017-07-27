@@ -38,12 +38,8 @@ function _draw()
           print(obj.door_type.." -> lvl?")
         end
       end
-      if obj.item then
-        print(obj.target.name)
-      end
     end
   )
-  print(tiles[1].new())
 end
 
 -- global functions -----------
@@ -55,8 +51,8 @@ function add_move(obj)
     obj.x=nx
     obj.y=ny
     obj.target:moved_on(
-      obj,
-      level:object_at(nx,ny)
+      level:at(nx,ny),
+      obj
     )
   end
 end
@@ -159,15 +155,6 @@ function level:move_to(obj,dx,dy,pow)
   end
 end
 
-function level:object_at(x,y)
-  for o in all(self.objects) do
-    if o.x==x and o.y==y then
-      return o
-    end
-  end
-  return nil
-end
-
 -- object:door ----------------
 
 door={bg=true}
@@ -203,7 +190,7 @@ end
 
 -- object:key -----------------
 
-key={name="key"}
+key={}
 
 function key:draw(orig,x,y)
   spr(6,x,y)
@@ -217,11 +204,7 @@ end
 
 -- object:player --------------
 
-player={
-  name="plyr",
-  inventory={},
-  pow=1
-}
+player={inventory={},pow=1}
 
 function player:draw(orig,x,y)
   spr(1,x,y)
@@ -256,9 +239,11 @@ function player:move_down()
   level:move_to(self.orig,0,1,self.pow)
 end
 
-function player:moved_on(orig,obj)
-  if (obj.item) self:take(obj)
-  if (obj.door) obj.target:go(obj)
+function player:moved_on(objs)
+  for obj in all(objs) do
+    if (obj.item) self:take(obj)
+    if (obj.door) obj.target:go(obj)
+  end
 end
 
 function player:new(obj)
@@ -273,7 +258,7 @@ end
 
 -- object:power bracelet ------
 
-pbracelet={name="pbclt"}
+pbracelet={}
 
 function pbracelet:draw(orig,x,y)
   spr(5,x,y)
@@ -288,7 +273,7 @@ end
 
 -- object:stone ---------------
 
-stone={name="stone"}
+stone={}
 
 function stone:draw(orig,x,y)
   if orig.on_switch then
@@ -298,15 +283,13 @@ function stone:draw(orig,x,y)
   end
 end
 
-function stone:moved_on(orig,obj)
-  if orig.on_switch then
-    level.switches+=1
-  end
-  if obj.switch then
-    orig.on_switch=true
-    level.switches-=1
-  else
-    orig.on_switch=false
+function stone:moved_on(objs,orig)
+  for obj in all(objs) do
+    if obj.switch then
+      orig.on_switch=true
+    else
+      orig.on_switch=false
+    end
   end
 end
 
