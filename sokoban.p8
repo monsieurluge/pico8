@@ -31,11 +31,11 @@ function _draw()
   foreach(
     level.objects,
     function(obj)
-      if obj.exit then
-        if obj.exit_to then
-          print(obj.exit_type.." -> lvl"..obj.exit_to)
+      if obj.door then
+        if obj.door_to then
+          print(obj.door_type.." -> lvl"..obj.door_to)
         else
-          print(obj.exit_type.." -> lvl?")
+          print(obj.door_type.." -> lvl?")
         end
       end
       if obj.item then
@@ -43,6 +43,7 @@ function _draw()
       end
     end
   )
+  print(tiles[1].new())
 end
 
 -- global functions -----------
@@ -60,6 +61,37 @@ function add_move(obj)
   end
 end
 
+function is_door(tile)
+  for nb in all(doors_ref) do
+    if (nb==tile) return true
+  end
+  return false
+end
+
+function is_wall(tile)
+  for nb in all(walls_ref) do
+    if (nb==tile) return true
+  end
+  return false
+end
+
+function new_obj(tile,x,y)
+  if is_wall(tile) then
+    obj=tiles["wall"].new(tile)
+  elseif is_door(tile) then
+    obj=tiles["door"].new(tile)
+  elseif not tiles[tile] then
+    return
+  else
+    obj=tiles[tile].new(x,y)
+  end
+  obj.x=x
+  obj.y=y
+  add_move(obj)
+  if (obj.is_player) player:new(obj)
+  add(level.objects,obj)
+end
+
 -- level ----------------------
 
 level={}
@@ -70,9 +102,7 @@ function level:init(from)
   self.y=size.y
   self.width=size.w
   self.height=size.h
-  self.switches=0
-  self.objects={}
-  self:make(room.exits,from)
+  self:make(from)
 end
 
 function level:at(x,y)
@@ -134,101 +164,12 @@ function level:in_bounds(x,y)
     and y <= self.height
 end
 
-function level:is_exit(tile)
-  for nb in all(exits) do
-    if (nb==tile) return true
-  end
-  return false
-end
-
-function level:is_wall(tile)
-  for nb in all(walls) do
-    if (nb==tile) return true
-  end
-  return false
-end
-
-function level:make(exits,from)
+function level:make(from)
   self.objects={}
+  self.switches=0
   for x=1,self.width do
     for y=1,self.height do
-      local target=mget(x-1+self.x,y-1+self.y)
-      local obj=nil
-      if self:is_wall(target) then
-        obj={
-          target=wall,
-          sprite=target
-        }
-      end
-      if self:is_exit(target) then
-        obj={
-          target=exit,
-          traversable=true,
-          exit=true,
-          exit_to=exit:to(target,exits),
-          exit_type=exit:type(target),
-          next_exit=exit:next_type(target),
-          sprite=target
-        }
-        if from==obj.next_exit then
-          local plyr={
-            x=x,
-            y=y,
-            is_player=true,
-            moveable=true,
-            target=player
-          }
-          player:new(plyr)
-          add_move(plyr)
-          add(self.objects,plyr)
-        end
-      end
-      if target==1 then
-        obj={
-          target=player,
-          moveable=true,
-          is_player=true
-        }
-        player:new(obj)
-      elseif target==2 or target==3 then
-        obj={
-          target=stone,
-          moveable=true,
-          on_switch=(target==3)
-        }
-        if target==3 then
-          local stch={
-            target=switch,
-            x=x,
-            y=y,
-            traversable=true          }
-          add_move(stch)
-          add(self.objects,stch)
-        end
-      elseif target==4 then
-        obj={
-          target=switch,
-          traversable=true
-        }
-      elseif target==5 then
-        obj={
-          target=pbracelet,
-          moveable=true,
-          item=true
-        }
-      elseif target==6 then
-        obj={
-          target=key,
-          moveable=true,
-          item=true
-        }
-      end
-      if obj!=nil then
-        obj.x=x
-        obj.y=y
-        add_move(obj)
-        add(self.objects,obj)
-      end
+      new_obj(mget(x-1+self.x,y-1+self.y),x,y)
     end
   end
 end
@@ -248,33 +189,33 @@ function level:object_at(x,y)
   return nil
 end
 
--- object:exit ----------------
+-- object:door ----------------
 
-exit={bg=true}
+door={bg=true}
 
-function exit:draw(orig,x,y)
+function door:draw(orig,x,y)
   spr(orig.sprite,x,y)
 end
 
-function exit:go(orig)
-  rooms:start(orig.exit_to,orig.exit_type)
+function door:go(orig)
+  rooms:start(orig.door_to,orig.door_type)
 end
 
-function exit:next_type(tile)
+function door:next_type(tile)
   if (tile==34) return "bottom"
   if (tile==18) return "top"
   if (tile==33) return "right"
   if (tile==32) return "left"
 end
 
-function exit:to(tile,exits)
-  if (tile==34) return exits.top
-  if (tile==18) return exits.bottom
-  if (tile==33) return exits.left
-  if (tile==32) return exits.right
+function door:to(tile,doors)
+  if (tile==34) return doors.top
+  if (tile==18) return doors.bottom
+  if (tile==33) return doors.left
+  if (tile==32) return doors.right
 end
 
-function exit:type(tile)
+function door:type(tile)
   if (tile==34) return "top"
   if (tile==18) return "bottom"
   if (tile==33) return "left"
@@ -338,7 +279,7 @@ end
 
 function player:moved_on(orig,obj)
   if (obj.item) self:take(obj)
-  if (obj.exit) obj.target:go(obj)
+  if (obj.door) obj.target:go(obj)
 end
 
 function player:new(obj)
@@ -412,12 +353,12 @@ rooms={
   {
     nb=1,
     size={x=0,y=0,w=15,h=15},
-    exits={top=2}
+    doors={top=2}
   },
   {
     nb=2,
     size={x=15,y=0,w=6,h=7},
-    exits={bottom=1}
+    doors={bottom=1}
   }
 }
 
@@ -428,8 +369,94 @@ end
 
 -- tiles ----------------------
 
-exits={18,32,33,34}
-walls={19,20,21,22,23,35,36,37,38,48,49,50,51,52,53,54,55}
+doors_ref={18,32,33,34}
+walls_ref={19,20,21,22,23,35,36,37,38,48,49,50,51,52,53,54,55}
+
+tiles={}
+
+tiles["wall"]={
+  new=function(nb)
+    return {
+      target=wall,
+      sprite=nb
+    }
+  end
+}
+
+tiles["door"]={
+  new=function(nb)
+    return {
+      target=door,
+      traversable=true,
+      door=true,
+      door_to=door:to(nb,room.doors),
+      door_type=door:type(nb),
+      next_door=door:next_type(nb),
+      sprite=nb
+    }
+  end
+}
+
+tiles[1]={
+  new=function()
+    local plyr={
+      target=player,
+      moveable=true,
+      is_player=true
+    }
+    return plyr
+  end
+}
+
+tiles[2]={
+  new=function()
+    return {
+      target=stone,
+      moveable=true
+    }
+  end
+}
+
+tiles[3]={
+  new=function(x,y)
+    new_obj(4,x,y)
+    return {
+      target=stone,
+      moveable=true,
+      on_switch=true
+    }
+  end
+}
+
+tiles[4]={
+  new=function()
+    return {
+      target=switch,
+      traversable=true,
+      switch=true
+    }
+  end
+}
+
+tiles[5]={
+  new=function()
+    return {
+      target=pbracelet,
+      moveable=true,
+      item=true
+    }
+  end
+}
+
+tiles[6]={
+  new=function()
+    return {
+      target=key,
+      moveable=true,
+      item=true
+    }
+  end
+}
 
 __gfx__
 00000000000990000099980000999900000000000000000000000000000000000088880000000000000000000000000000000000000000000000000000000000
