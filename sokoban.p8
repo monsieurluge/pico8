@@ -61,30 +61,9 @@ function add_move(obj)
   end
 end
 
-function is_door(tile)
-  for nb in all(doors_ref) do
-    if (nb==tile) return true
-  end
-  return false
-end
-
-function is_wall(tile)
-  for nb in all(walls_ref) do
-    if (nb==tile) return true
-  end
-  return false
-end
-
 function new_obj(tile,x,y)
-  if is_wall(tile) then
-    obj=tiles["wall"].new(tile)
-  elseif is_door(tile) then
-    obj=tiles["door"].new(tile)
-  elseif not tiles[tile] then
-    return
-  else
-    obj=tiles[tile].new(x,y)
-  end
+  if (not tiles[tile]) return
+  obj=tiles[tile].new(x,y)
   obj.x=x
   obj.y=y
   add_move(obj)
@@ -369,33 +348,34 @@ end
 
 -- tiles ----------------------
 
-doors_ref={18,32,33,34}
-walls_ref={19,20,21,22,23,35,36,37,38,48,49,50,51,52,53,54,55}
-
 tiles={}
 
-tiles["wall"]={
-  new=function(nb)
-    return {
-      target=wall,
-      sprite=nb
-    }
-  end
-}
+for i in all({19,20,21,22,23,35,36,37,38,48,49,50,51,52,53,54,55}) do
+  tiles[i]={
+    new=function()
+      return {
+        target=wall,
+        sprite=i
+      }
+    end
+  }
+end
 
-tiles["door"]={
-  new=function(nb)
-    return {
-      target=door,
-      traversable=true,
-      door=true,
-      door_to=door:to(nb,room.doors),
-      door_type=door:type(nb),
-      next_door=door:next_type(nb),
-      sprite=nb
-    }
-  end
-}
+for i in all({18,32,33,34}) do
+  tiles[i]={
+    new=function()
+      return {
+        target=door,
+        traversable=true,
+        door=true,
+        door_to=door:to(i,room.doors),
+        door_type=door:type(i),
+        next_door=door:next_type(i),
+        sprite=i
+      }
+    end
+  }
+end
 
 tiles[1]={
   new=function()
