@@ -278,11 +278,10 @@ function stone:draw(orig,x,y)
 end
 
 function stone:moved_on(objs,orig)
+  orig.on_switch=false
   for obj in all(objs) do
     if obj.switch then
       orig.on_switch=true
-    else
-      orig.on_switch=false
     end
   end
 end
