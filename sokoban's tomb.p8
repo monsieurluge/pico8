@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
--- sokoban
+-- sokoban's tomb
 -- by monsieurluge
 
 function _init()
