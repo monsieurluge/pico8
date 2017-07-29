@@ -49,12 +49,7 @@ end
 
 function new_obj(tile,x,y)
   if (not tiles[tile]) return
-  obj=tiles[tile].new(x,y)
-  obj.x=x
-  obj.y=y
-  add_move(obj)
-  if (obj.is_player) player:new(obj)
-  add(level.objects,obj)
+  tiles[tile].new(x,y)
 end
 
 -- level ----------------------
@@ -111,15 +106,14 @@ function level:draw()
   rectfill(ox,oy,ox+self.width*8-1,oy+self.height*8-1,5)
   self:draw_objects(ox,oy,true)
   self:draw_objects(ox,oy)
-  player:draw_inventory()
 end
 
 function level:draw_objects(ox,oy,bg)
   foreach(
     self.objects,
     function(obj)
-      if bg==obj.target.bg then
-        obj.target:draw(obj,(obj.x-1)*8+ox,(obj.y-1)*8+oy)
+      if bg==obj.bg then
+        obj:draw((obj.x-1)*8+ox,(obj.y-1)*8+oy)
       end
     end
   )
@@ -140,27 +134,27 @@ function level:make(from)
       new_obj(mget(x-1+self.x,y-1+self.y),x,y)
     end
   end
-  if from then
-    for o in all(self.objects) do
-      if (o.player) del(self.objects,o)
-      if o.next_door==from then
-        new_obj(1,o.x,o.y)
-      end
-    end
-  end
-  foreach(
-    self.objects,
-    function(obj)
-      foreach(
-        level:at(obj.x,obj.y),
-        function(other)
-          if type(other.target.covered)=="function" then
-            other.target:covered(obj)
-          end
-        end
-      )
-    end
-  )
+  -- if from then
+  --   for o in all(self.objects) do
+  --     if (o.player) del(self.objects,o)
+  --     if o.next_door==from then
+  --       new_obj(1,o.x,o.y)
+  --     end
+  --   end
+  -- end
+  -- foreach(
+  --   self.objects,
+  --   function(obj)
+  --     foreach(
+  --       level:at(obj.x,obj.y),
+  --       function(other)
+  --         if type(other.target.covered)=="function" then
+  --           other.target:covered(obj)
+  --         end
+  --       end
+  --     )
+  --   end
+  -- )
 end
 
 function level:move_to(obj,dx,dy,pow)
@@ -198,201 +192,254 @@ end
 
 -- object:door ----------------
 
-door={bg=true}
-
-function door:draw(orig,x,y)
-  spr(orig.sprite,x,y)
-end
-
-function door:go(orig)
-  rooms:start(orig.door_to,orig.door_type)
-end
-
-function door:next_type(tile)
-  if (tile==34) return "bottom"
-  if (tile==18) return "top"
-  if (tile==33) return "right"
-  if (tile==32) return "left"
-end
-
-function door:to(tile,doors)
-  if (tile==34) return doors.top
-  if (tile==18) return doors.bottom
-  if (tile==33) return doors.left
-  if (tile==32) return doors.right
-end
-
-function door:type(tile)
-  if (tile==34) return "top"
-  if (tile==18) return "bottom"
-  if (tile==33) return "left"
-  if (tile==32) return "right"
-end
+door={
+  new=function(self,x,y,tile)
+    return {
+      x=x,
+      y=y,
+      bg=true,
+      door=true,
+      traversable=true,
+      -- door_to=door:to(i,room.doors),
+      -- door_type=door:type(i),
+      -- next_door=door:next_type(i)
+      draw=function(self,x,y)
+        spr(tile,x,y)
+      end,
+      go=function(self,to)
+        --todo
+        -- rooms:start(orig.door_to,orig.door_type)
+      end,
+      next=function(self,tile)
+        if (tile==34) return "bottom"
+        if (tile==18) return "top"
+        if (tile==33) return "right"
+        if (tile==32) return "left"
+      end,
+      to=function(self,tile,doors)
+        if (tile==34) return doors.top
+        if (tile==18) return doors.bottom
+        if (tile==33) return doors.left
+        if (tile==32) return doors.right
+      end,
+      type=function(self,tile)
+        if (tile==34) return "top"
+        if (tile==18) return "bottom"
+        if (tile==33) return "left"
+        if (tile==32) return "right"
+      end
+    }
+  end
+}
 
 -- object:fake switch ---------
 
-fakeswitch={bg=true}
-
-function fakeswitch:draw(orig,x,y)
-  spr(9,x,y)
-end
-
-function fakeswitch:covered(by)
-  --nothing
-end
+fakeswitch={
+  new=function(self,x,y)
+    return {
+      x=x,
+      y=y,
+      bg=true,
+      switch=true,
+      traversable=true,
+      draw=function(self,x,y)
+        spr(9,x,y)
+      end,
+      covered=function(self,by)
+        if by.stone then
+          --todo
+          -- level.switches-=1
+          -- by.target:on(self.orig)
+        end
+      end
+    }
+  end
+}
 
 -- object:key -----------------
 
-key={}
-
-function key:draw(orig,x,y)
-  spr(6,x,y)
-end
-
-function key:moved_on()
-end
-
-function key:taken(obj)
-end
+key={
+  new=function(self,x,y)
+    return {
+      x=x,
+      y=y,
+      item=true,
+      moveable=true,
+      draw=function(self,x,y)
+        spr(6,x,y)
+      end,
+      taken=function(self,by)
+        --todo
+      end
+    }
+  end
+}
 
 -- object:player --------------
 
-player={inventory={},pow=1}
-
-function player:draw(orig,x,y)
-  spr(1,x,y)
-end
-
-function player:draw_inventory()
-  nb=0
-  for item in all(self.inventory) do
-    spr(39,nb*9+1,119)
-    item.target:draw(item,nb*9+1,119)
-    nb+=1
+player={
+  new=function(self,x,y)
+    return {
+      x=x,
+      y=y,
+      inventory={},
+      power=1,
+      moveable=true,
+      draw=function(self,x,y)
+        spr(1,x,y)
+        self:draw_inventory()
+      end,
+      draw_inventory=function(self)
+        nb=0
+        for item in all(self.inventory) do
+          spr(16,nb*9+1,119)
+          item.draw(nb*9+1,119)
+          nb+=1
+        end
+      end,
+      increase_pow=function(self,value)
+        self.power+=value
+      end,
+      move_left=function(self)
+        level:move_to(self.orig,-1,0,self.pow)
+      end,
+      move_right=function(self)
+        level:move_to(self.orig,1,0,self.pow)
+      end,
+      move_up=function(self)
+        level:move_to(self.orig,0,-1,self.pow)
+      end,
+      move_down=function(self)
+        level:move_to(self.orig,0,1,self.pow)
+      end,
+      moved_on=function(self,targets)
+        message:hide()
+        for obj in all(targets) do
+          if (obj.item) self:take(obj)
+          if (obj.door) obj.target:go(obj)
+        end
+      end,
+      take=function(self,item)
+        add(self.inventory,item)
+        item:taken(self)
+        del(level.objects,item)
+      end
+    }
   end
-end
-
-function player:increase_pow(value)
-  self.pow+=value
-end
-
-function player:move_left()
-  level:move_to(self.orig,-1,0,self.pow)
-end
-
-function player:move_right()
-  level:move_to(self.orig,1,0,self.pow)
-end
-
-function player:move_up()
-  level:move_to(self.orig,0,-1,self.pow)
-end
-
-function player:move_down()
-  level:move_to(self.orig,0,1,self.pow)
-end
-
-function player:moved_on(objs)
-  message:hide()
-  for obj in all(objs) do
-    if (obj.item) self:take(obj)
-    if (obj.door) obj.target:go(obj)
-  end
-end
-
-function player:new(obj)
-  self.orig=obj
-end
-
-function player:take(item)
-  add(self.inventory,item)
-  item.target:taken(self)
-  del(level.objects,item)
-end
+}
 
 -- object:power bracelet ------
 
-pbracelet={}
-
-function pbracelet:draw(orig,x,y)
-  spr(5,x,y)
-end
-
-function pbracelet:moved_on()
-end
-
-function pbracelet:taken(obj)
-  obj:increase_pow(1)
-end
-
--- object:stone ---------------
-
-stone={}
-
-function stone:draw(orig,x,y)
-  if orig.on_switch then
-    spr(3,x,y)
-  else
-    spr(2,x,y)
+pbracelet={
+  new=function(self,x,y)
+    return {
+      x=x,
+      y=y,
+      item=true,
+      moveable=true,
+      draw=function(self,x,y)
+        spr(5,x,y)
+      end,
+      taken=function(self,by)
+        obj:increase_pow(1)
+      end
+    }
   end
-end
-
-function stone:on(obj)
-  -- if (obj.switch) self.orig.on_switch=true
-end
-
-function stone:moved_on(objs,orig)
-  orig.on_switch=false
-  for obj in all(objs) do
-    if obj.switch then
-      orig.on_switch=true
-      obj.target:covered(orig)
-    end
-  end
-end
-
--- object:switch -------------
-
-switch={bg=true}
-
-function switch:draw(orig,x,y)
-  spr(4,x,y)
-end
-
-function switch:covered(by)
-  if by.stone then
-    level.switches-=1
-    by.target:on(self.orig)
-  end
-end
-
--- object:wall ---------------
-
-wall={bg=true}
-
-function wall:draw(orig,x,y)
-  spr(orig.sprite,x,y)
-end
+}
 
 -- object:secret wall ---------
 
-secretwall={}
+secretwall={
+  new=function(self,x,y,tile)
+    return {
+      x=x,
+      y=y,
+      draw=function(self,x,y)
+        spr(tile,x,y)
+      end
+    }
+  end
+}
 
-function secretwall:draw(orig,x,y)
-  spr(orig.sprite,x,y)
-end
+-- object:stone ---------------
+
+stone={
+  new=function(self,x,y)
+    return {
+      x=x,
+      y=y,
+      moveable=true,
+      stone=true,
+      draw=function(self,x,y)
+        spr(2,x,y)
+      end,
+      moved_on=function(self,targets)
+        for obj in all(targets) do
+          if (obj.switch) obj:covered(self)
+        end
+      end,
+      on=function(self,target)
+        --todo
+      end
+    }
+  end
+}
+
+-- object:switch -------------
+
+switch={
+  new=function(self,x,y)
+    return {
+      x=x,
+      y=y,
+      bg=true,
+      switch=true,
+      traversable=true,
+      draw=function(self,x,y)
+        spr(4,x,y)
+      end,
+      covered=function(self,by)
+        if by.stone then
+          --todo
+          -- level.switches-=1
+          -- by.target:on(self.orig)
+        end
+      end
+    }
+  end
+}
 
 -- object:text on a wall ------
 
-text={}
+text={
+  new=function(self,x,y)
+    return {
+      x=x,
+      y=y,
+      draw=function(self,x,y)
+        spr(39,x,y)
+      end,
+      touched=function(by)
+        if (by.player) message:show()
+      end
+    }
+  end
+}
 
-function text:draw(orig,x,y)
-  spr(39,x,y)
-end
+-- object:wall ---------------
 
-function text:touched(by)
-  message:show()
-end
+wall={
+  new=function(self,x,y,tile)
+    return {
+      x=x,
+      y=y,
+      bg=true,
+      draw=function(self,x,y)
+        spr(tile,x,y)
+      end
+    }
+  end
+}
 
 -- rooms ---------------------
 
@@ -424,133 +471,83 @@ end
 
 tiles={}
 
-for i in all({19,20,21,22,23,35,36,37,38,48,49,50,51,52,53,54,55}) do
-  tiles[i]={
-    new=function()
-      return {
-        target=wall,
-        sprite=i
-      }
+for nb in all({19,20,21,22,23,35,36,37,38,48,49,50,51,52,53,54,55}) do
+  tiles[nb]={
+    new=function(x,y)
+      add(level.objects,wall:new(x,y,nb))
     end
   }
 end
 
-for i in all({25,41,58,59}) do
-  tiles[i]={
-    new=function()
-      return {
-        target=secretwall,
-        sprite=i
-      }
+for nb in all({25,41,58,59}) do
+  tiles[nb]={
+    new=function(x,y)
+      add(level.objects,secretwall:new(x,y,nb))
     end
   }
 end
 
-for i in all({18,32,33,34}) do
-  tiles[i]={
-    new=function()
-      return {
-        target=door,
-        traversable=true,
-        door=true,
-        door_to=door:to(i,room.doors),
-        door_type=door:type(i),
-        next_door=door:next_type(i),
-        sprite=i
-      }
+for nb in all({18,32,33,34}) do
+  tiles[nb]={
+    new=function(x,y)
+      add(level.objects,door:new(x,y,nb))
     end
   }
 end
 
 tiles[1]={
-  new=function()
-    local plyr={
-      target=player,
-      moveable=true,
-      is_player=true
-    }
-    return plyr
+  new=function(x,y)
+    add(level.objects,player:new(x,y))
   end
 }
 
 tiles[2]={
-  new=function()
-    return {
-      target=stone,
-      stone=true,
-      moveable=true
-    }
+  new=function(x,y)
+    add(level.objects,stone:new(x,y))
   end
 }
 
 tiles[3]={
   new=function(x,y)
-    new_obj(4,x,y)
-    return {
-      target=stone,
-      stone=true,
-      moveable=true
-    }
+    add(level.objects,switch:new(x,y))
+    add(level.objects,stone:new(x,y))
   end
 }
 
 tiles[4]={
-  new=function()
-    level.switches+=1
-    return {
-      target=switch,
-      traversable=true,
-      switch=true
-    }
+  new=function(x,y)
+    add(level.objects,switch:new(x,y))
   end
 }
 
 tiles[5]={
-  new=function()
-    return {
-      target=pbracelet,
-      moveable=true,
-      item=true
-    }
+  new=function(x,y)
+    add(level.objects,pbracelet:new(x,y))
   end
 }
 
 tiles[6]={
-  new=function()
-    return {
-      target=key,
-      moveable=true,
-      item=true
-    }
+  new=function(x,y)
+    add(level.objects,key:new(x,y))
   end
 }
 
 tiles[9]={
-  new=function()
-    return {
-      target=fakeswitch,
-      traversable=true,
-      switch=true
-    }
+  new=function(x,y)
+    add(level.objects,fakeswitch:new(x,y))
   end
 }
 
 tiles[10]={
   new=function(x,y)
-    new_obj(9,x,y)
-    return {
-      target=stone,
-      stone=true,
-      moveable=true
-    }
+    add(level.objects,fakeswitch:new(x,y))
+    add(level.objects,stone:new(x,y))
   end
 }
 
 tiles[39]={
-  new=function()
-    return {
-      target=text
-    }
+  new=function(x,y)
+    add(level.objects,text:new(x,y))
   end
 }
 
@@ -696,12 +693,12 @@ __map__
 0000002434352517253536260000002608000005141600000014000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000003425253425362525360000002515161214252516001425000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000034352517252736000000000000000000002525152525000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000200003429360000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000200003422360000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0014031600000000000000140316000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-1434253616000900090014342536160000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+1434253616000a00090014342536160000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 3425172536000004000034251725360000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0034353600000300040000343536000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0034353605000300040006343536000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
