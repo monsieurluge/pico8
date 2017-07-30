@@ -42,151 +42,148 @@ controls={
 
 -- level ----------------------
 
-level={}
-
-function level:init(from)
-  local size=room.size
-  self.x=size.x
-  self.y=size.y
-  self.width=size.w
-  self.height=size.h
-  self:make(from)
-end
-
-function level:at(x,y)
-  local objs={}
-  for o in all(self.objects) do
-    if o.x==x and o.y==y then
-      add(objs,o)
-    end
-  end
-  return objs
-end
-
-function level:can_move(obj,dx,dy,power)
-  if (not obj.moveable or power<0) return false
-  local nx=obj.x+dx
-  local ny=obj.y+dy
-  if (not self:in_bounds(nx,ny)) return false
-  local nxtobjs=self:at(nx,ny)
-  local result=true
-  for o in all(nxtobjs) do
-    if type(o.touched)=="function" then
-      o.touched(obj)
-    end
-    if o.item and obj.player
-    or o.traversable
-    then
-      result=result and true
-    elseif self:can_move(o,dx,dy,power-1) then
-      if type(o.quit)=="function" then
-        o:quit(level:at(o.x,o.y))
-      end
-      o.x+=dx
-      o.y+=dy
-      o:moved_on(level:at(o.x,o.y))
-    else
-      result=false
-    end
-  end
-  return result
-end
-
-function level:draw()
-  local ox=64-self.width*4
-  local oy=64-self.height*4
-  cls(1)
-  rectfill(ox,oy,ox+self.width*8-1,oy+self.height*8-1,5)
-  self:draw_objects(ox,oy,true)
-  self:draw_objects(ox,oy)
-end
-
-function level:draw_objects(ox,oy,bg)
-  foreach(
-    self.objects,
-    function(obj)
-      if bg==obj.bg then
-        obj:draw((obj.x-1)*8+ox,(obj.y-1)*8+oy)
+level={
+  init=function(self,from)
+    local size=room.size
+    self.x=size.x
+    self.y=size.y
+    self.width=size.w
+    self.height=size.h
+    self.from=from
+    self.objects={}
+    self.switches=0
+    self:make()
+  end,
+  at=function(self,x,y)
+    local objs={}
+    for o in all(self.objects) do
+      if o.x==x and o.y==y then
+        add(objs,o)
       end
     end
-  )
-end
-
-function level:in_bounds(x,y)
-  return x >= 1
-    and x <= self.width
-    and y >= 1
-    and y <= self.height
-end
-
-function level:make(from)
-  self.objects={}
-  self.switches=0
-  for x=1,self.width do
-    for y=1,self.height do
-      tiles:new(mget(x-1+self.x,y-1+self.y),x,y)
+    return objs
+  end,
+  can_move=function(self,obj,dx,dy,power)
+    if (not obj.moveable or power<0) return false
+    local nx=obj.x+dx
+    local ny=obj.y+dy
+    if (not self:in_bounds(nx,ny)) return false
+    local nxtobjs=self:at(nx,ny)
+    local result=true
+    for o in all(nxtobjs) do
+      if type(o.touched)=="function" then
+        o.touched(obj)
+      end
+      if o.item and obj.player
+      or o.traversable
+      then
+        result=result and true
+      elseif self:can_move(o,dx,dy,power-1) then
+        self:move(o,dx,dy)
+      else
+        result=false
+      end
     end
-  end
-  -- if from then
-  --   for o in all(self.objects) do
-  --     if (o.player) del(self.objects,o)
-  --     if o.next_door==from then
-  --       new_obj(1,o.x,o.y)
-  --     end
-  --   end
-  -- end
-  foreach(
-    self.objects,
-    function(obj)
-      foreach(
-        level:at(obj.x,obj.y),
-        function(target)
-          if type(target.covered)=="function" then
-            target:covered(obj)
-          end
+    return result
+  end,
+  draw=function(self)
+    local ox=64-self.width*4
+    local oy=64-self.height*4
+    cls(1)
+    rectfill(ox,oy,ox+self.width*8-1,oy+self.height*8-1,5)
+    self:draw_objects(ox,oy,true)
+    self:draw_objects(ox,oy)
+  end,
+  draw_objects=function(self,ox,oy,bg)
+    foreach(
+      self.objects,
+      function(obj)
+        if bg==obj.bg then
+          obj:draw((obj.x-1)*8+ox,(obj.y-1)*8+oy)
         end
-      )
+      end
+    )
+  end,
+  in_bounds=function(self,x,y)
+    return x >= 1
+      and x <= self.width
+      and y >= 1
+      and y <= self.height
+  end,
+  make=function(self)
+    for x=1,self.width do
+      for y=1,self.height do
+        tiles:new(mget(x-1+self.x,y-1+self.y),x,y)
+      end
     end
-  )
-end
-
-function level:move_to(obj,dx,dy,power)
-  if self:can_move(obj,dx,dy,power) then
-    if type(obj.quit)=="function" then
-      obj:quit(level:at(obj.x,obj.y))
+    -- if from then
+    --   for o in all(self.objects) do
+    --     if (o.player) del(self.objects,o)
+    --     if o.next_door==self.from then
+    --       new_obj(1,o.x,o.y)
+    --     end
+    --   end
+    -- end
+    foreach(
+      self.objects,
+      function(obj)
+        foreach(
+          level:at(obj.x,obj.y),
+          function(target)
+            if type(target.covered)=="function" then
+              target:covered(obj)
+            end
+          end
+        )
+      end
+    )
+  end,
+  move=function(self,obj,dx,dy)
+    if type(obj.leave)=="function" then
+      obj:leave(level:at(obj.x,obj.y))
     end
     obj.x+=dx
     obj.y+=dy
     obj:moved_on(level:at(obj.x,obj.y))
+  end,
+  move_to=function(self,obj,dx,dy,power)
+    if self:can_move(obj,dx,dy,power) then
+      self:move(obj,dx,dy)
+    end
+  end,
+  switchon=function(self)
+    self.switches-=1
+  end,
+  switchoff=function(self)
+    self.switches+=1
   end
-end
+}
 
 -- message --------------------
 
-message={state=-12}
-
-function message:draw()
-  if self.state<0 and self.action=="show" then
-    self.state+=2
+message={
+  state=-12,
+  draw=function(self)
+    if self.state<0 and self.action=="show" then
+      self.state+=2
+    end
+    if self.state>-12 and self.action=="hide" then
+      self.state-=2
+    end
+    if (self.state==-12) return
+    rectfill(0,self.state,127,self.state+10,1)
+    rect(0,self.state,127,self.state+10,5)
+    color(9)
+    local text=room.text
+    print(text,(126-#text*4)/2+1,self.state+3)
+  end,
+  hide=function(self)
+    self.action="hide"
+  end,
+  show=function(self)
+    self.action="show"
   end
-  if self.state>-12 and self.action=="hide" then
-    self.state-=2
-  end
-  if (self.state==-12) return
-  rectfill(0,self.state,127,self.state+10,1)
-  rect(0,self.state,127,self.state+10,5)
-  color(9)
-  local text=room.text
-  print(text,(126-#text*4)/2+1,self.state+3)
-end
-
-function message:hide()
-  self.action="hide"
-end
-
-function message:show()
-  self.action="show"
-end
+}
 
 -- object:door ----------------
 
@@ -377,7 +374,7 @@ stone={
           spr(2,x,y)
         end
       end,
-      quit=function(self,targets)
+      leave=function(self,targets)
         for target in all(targets) do
           if target.switch then
             target:uncovered()
@@ -412,12 +409,12 @@ switch={
       end,
       covered=function(self,by)
         if by.stone then
-          level.switches-=1
+          level:switchon()
           by:on(self)
         end
       end,
       uncovered=function()
-        level.switches+=1
+        level:switchoff()
       end
     }
   end
@@ -462,6 +459,7 @@ rooms={
     nb=1,
     size={x=0,y=0,w=15,h=15},
     doors={top=2},
+    triggers={switch="top"},
     text="3 stones,an arrow to the north"
   },
   {
@@ -715,11 +713,11 @@ __map__
 00000014242a2517252a26160000002531320002382102000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000002434352517253536260000002608000005141600000014000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000003425253425362525360000002515161214252516001425000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000034292517252736000002000000000000002525152525000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000200003435360000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000034292517252736000000000000000000002525152525000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000003435360000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00142a1600000000000000142a16000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-1434253616000300090014342536160000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+1434253616000a00090014342536160000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 3425172536020004000034251725360000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0034353600000400040000343536000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -870,4 +868,3 @@ __music__
 00 41424344
 00 41424344
 00 41424344
-
