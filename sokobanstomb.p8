@@ -17,33 +17,13 @@ function _draw()
   level:draw()
   message:draw()
   color(12)
-  print(level.switches)
-end
-
--- global functions -----------
-
-function add_move(obj)
-  function obj:move(dx,dy)
-    local nx=self.x+dx
-    local ny=self.y+dy
-    obj.x=nx
-    obj.y=ny
-    obj.target:moved_on(
-      level:at(nx,ny),
-      obj
-    )
-  end
-end
-
-function new_obj(tile,x,y)
-  if (not tiles[tile]) return
-  tiles[tile].new(x,y)
+  print("switches="..level.switches)
 end
 
 -- controls -------------------
 
 controls={
-  player=function(self,target)
+  addplayer=function(self,target)
     self.player=target
   end,
   update=function(self)
@@ -85,23 +65,25 @@ function level:at(x,y)
   return objs
 end
 
-function level:can_move(obj,dx,dy,pow)
-  if (not obj.moveable or pow<0) return false
+function level:can_move(obj,dx,dy,power)
+  if (not obj.moveable or power<0) return false
   local nx=obj.x+dx
   local ny=obj.y+dy
   if (not self:in_bounds(nx,ny)) return false
   local nxtobjs=self:at(nx,ny)
   local result=true
   for o in all(nxtobjs) do
-    if type(o.target.touched)=="function" then
-      o.target:touched(obj)
+    if type(o.touched)=="function" then
+      o.touched(obj)
     end
-    if o.item and obj.is_player
+    if o.item and obj.player
     or o.traversable
     then
       result=result and true
-    elseif self:can_move(o,dx,dy,pow-1) then
-      o:move(dx,dy)
+    elseif self:can_move(o,dx,dy,power-1) then
+      o.x+=dx
+      o.y+=dy
+      o:moved_on(level:at(o.x,o.y))
     else
       result=false
     end
@@ -141,7 +123,7 @@ function level:make(from)
   self.switches=0
   for x=1,self.width do
     for y=1,self.height do
-      new_obj(mget(x-1+self.x,y-1+self.y),x,y)
+      tiles:new(mget(x-1+self.x,y-1+self.y),x,y)
     end
   end
   -- if from then
@@ -157,9 +139,9 @@ function level:make(from)
     function(obj)
       foreach(
         level:at(obj.x,obj.y),
-        function(other)
-          if type(other.covered)=="function" then
-            other:covered(obj)
+        function(target)
+          if type(target.covered)=="function" then
+            target:covered(obj)
           end
         end
       )
@@ -169,7 +151,9 @@ end
 
 function level:move_to(obj,dx,dy,power)
   if self:can_move(obj,dx,dy,power) then
-    obj:move(dx,dy)
+    obj.x+=dx
+    obj.y+=dy
+    obj:moved_on(level:at(obj.x,obj.y))
   end
 end
 
@@ -293,6 +277,7 @@ player={
       x=x,
       y=y,
       inventory={},
+      player=true,
       power=1,
       moveable=true,
       draw=function(self,x,y)
@@ -303,24 +288,24 @@ player={
         nb=0
         for item in all(self.inventory) do
           spr(16,nb*9+1,119)
-          item.draw(nb*9+1,119)
+          item:draw(nb*9+1,119)
           nb+=1
         end
       end,
-      increase_pow=function(self,value)
+      increasepower=function(self,value)
         self.power+=value
       end,
       move_left=function(self)
-        level:move_to(self.orig,-1,0,self.pow)
+        level:move_to(self,-1,0,self.power)
       end,
       move_right=function(self)
-        level:move_to(self.orig,1,0,self.pow)
+        level:move_to(self,1,0,self.power)
       end,
       move_up=function(self)
-        level:move_to(self.orig,0,-1,self.pow)
+        level:move_to(self,0,-1,self.power)
       end,
       move_down=function(self)
-        level:move_to(self.orig,0,1,self.pow)
+        level:move_to(self,0,1,self.power)
       end,
       moved_on=function(self,targets)
         message:hide()
@@ -351,7 +336,7 @@ pbracelet={
         spr(5,x,y)
       end,
       taken=function(self,by)
-        obj:increase_pow(1)
+        by:increasepower(1)
       end
     }
   end
@@ -388,8 +373,8 @@ stone={
         end
       end,
       moved_on=function(self,targets)
-        for obj in all(targets) do
-          if (obj.switch) obj:covered(self)
+        for target in all(targets) do
+          if (target.switch) target:covered(self)
         end
       end,
       on=function(self,target)
@@ -486,7 +471,12 @@ end
 
 -- tiles ----------------------
 
-tiles={}
+tiles={
+  new=function(self,tile,x,y)
+    if (not self[tile]) return
+    self[tile].new(x,y)
+  end
+}
 
 for nb in all({19,20,21,22,23,35,36,37,38,48,49,50,51,52,53,54,55}) do
   tiles[nb]={
@@ -515,7 +505,7 @@ end
 tiles[1]={
   new=function(x,y)
     local plyr=player:new(x,y)
-    controls:player(plyr)
+    controls:addplayer(plyr)
     add(level.objects,plyr)
   end
 }
