@@ -5,24 +5,12 @@ __lua__
 -- by monsieurluge
 
 function _init()
-  room={}
   state="play"
   rooms:start(1)
 end
 
 function _update()
-  if btnp(0) then
-    player:move_left()
-  end
-  if btnp(1) then
-    player:move_right()
-  end
-  if btnp(2) then
-    player:move_up()
-  end
-  if btnp(3) then
-    player:move_down()
-  end
+  controls:update()
 end
 
 function _draw()
@@ -51,6 +39,28 @@ function new_obj(tile,x,y)
   if (not tiles[tile]) return
   tiles[tile].new(x,y)
 end
+
+-- controls -------------------
+
+controls={
+  player=function(self,target)
+    self.player=target
+  end,
+  update=function(self)
+    if btnp(0) then
+      self.player:move_left()
+    end
+    if btnp(1) then
+      self.player:move_right()
+    end
+    if btnp(2) then
+      self.player:move_up()
+    end
+    if btnp(3) then
+      self.player:move_down()
+    end
+  end
+}
 
 -- level ----------------------
 
@@ -142,23 +152,23 @@ function level:make(from)
   --     end
   --   end
   -- end
-  -- foreach(
-  --   self.objects,
-  --   function(obj)
-  --     foreach(
-  --       level:at(obj.x,obj.y),
-  --       function(other)
-  --         if type(other.target.covered)=="function" then
-  --           other.target:covered(obj)
-  --         end
-  --       end
-  --     )
-  --   end
-  -- )
+  foreach(
+    self.objects,
+    function(obj)
+      foreach(
+        level:at(obj.x,obj.y),
+        function(other)
+          if type(other.covered)=="function" then
+            other:covered(obj)
+          end
+        end
+      )
+    end
+  )
 end
 
-function level:move_to(obj,dx,dy,pow)
-  if self:can_move(obj,dx,dy,pow) then
+function level:move_to(obj,dx,dy,power)
+  if self:can_move(obj,dx,dy,power) then
     obj:move(dx,dy)
   end
 end
@@ -371,7 +381,11 @@ stone={
       moveable=true,
       stone=true,
       draw=function(self,x,y)
-        spr(2,x,y)
+        if self.onswitch then
+          spr(2,x,y)
+        else
+          spr(3,x,y)
+        end
       end,
       moved_on=function(self,targets)
         for obj in all(targets) do
@@ -379,7 +393,11 @@ stone={
         end
       end,
       on=function(self,target)
-        --todo
+        if target.switch then
+          self.onswitch=true
+        else
+          self.onswitch=false
+        end
       end
     }
   end
@@ -400,9 +418,8 @@ switch={
       end,
       covered=function(self,by)
         if by.stone then
-          --todo
-          -- level.switches-=1
-          -- by.target:on(self.orig)
+          level.switches-=1
+          by:on(self)
         end
       end
     }
@@ -497,7 +514,9 @@ end
 
 tiles[1]={
   new=function(x,y)
-    add(level.objects,player:new(x,y))
+    local plyr=player:new(x,y)
+    controls:player(plyr)
+    add(level.objects,plyr)
   end
 }
 
@@ -511,12 +530,14 @@ tiles[3]={
   new=function(x,y)
     add(level.objects,switch:new(x,y))
     add(level.objects,stone:new(x,y))
+    level.switches+=1
   end
 }
 
 tiles[4]={
   new=function(x,y)
     add(level.objects,switch:new(x,y))
+    level.switches+=1
   end
 }
 
