@@ -81,6 +81,9 @@ function level:can_move(obj,dx,dy,power)
     then
       result=result and true
     elseif self:can_move(o,dx,dy,power-1) then
+      if type(o.quit)=="function" then
+        o:quit(level:at(o.x,o.y))
+      end
       o.x+=dx
       o.y+=dy
       o:moved_on(level:at(o.x,o.y))
@@ -151,6 +154,9 @@ end
 
 function level:move_to(obj,dx,dy,power)
   if self:can_move(obj,dx,dy,power) then
+    if type(obj.quit)=="function" then
+      obj:quit(level:at(obj.x,obj.y))
+    end
     obj.x+=dx
     obj.y+=dy
     obj:moved_on(level:at(obj.x,obj.y))
@@ -241,10 +247,11 @@ fakeswitch={
       end,
       covered=function(self,by)
         if by.stone then
-          --todo
-          -- level.switches-=1
-          -- by.target:on(self.orig)
+          by:on(self)
         end
+      end,
+      uncovered=function()
+        --nothing
       end
     }
   end
@@ -367,9 +374,17 @@ stone={
       stone=true,
       draw=function(self,x,y)
         if self.onswitch then
-          spr(2,x,y)
-        else
           spr(3,x,y)
+        else
+          spr(2,x,y)
+        end
+      end,
+      quit=function(self,targets)
+        for target in all(targets) do
+          if target.switch then
+            target:uncovered()
+            self.onswitch=false
+          end
         end
       end,
       moved_on=function(self,targets)
@@ -378,11 +393,7 @@ stone={
         end
       end,
       on=function(self,target)
-        if target.switch then
-          self.onswitch=true
-        else
-          self.onswitch=false
-        end
+        self.onswitch=target.switch
       end
     }
   end
@@ -406,6 +417,9 @@ switch={
           level.switches-=1
           by:on(self)
         end
+      end,
+      uncovered=function()
+        level.switches+=1
       end
     }
   end
