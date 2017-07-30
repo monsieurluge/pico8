@@ -40,6 +40,92 @@ controls={
   end
 }
 
+-- door tile/object -----------
+
+door={
+  new=function(self,x,y,tile)
+    return {
+      x=x,
+      y=y,
+      bg=true,
+      door=true,
+      traversable=true,
+      -- door_to=door:to(i,room.doors),
+      -- door_type=door:type(i),
+      -- next_door=door:next_type(i)
+      draw=function(self,x,y)
+        spr(tile,x,y)
+      end,
+      go=function(self,to)
+        --todo
+        -- rooms:start(orig.door_to,orig.door_type)
+      end,
+      next=function(self,tile)
+        if (tile==34) return "bottom"
+        if (tile==18) return "top"
+        if (tile==33) return "right"
+        if (tile==32) return "left"
+      end,
+      to=function(self,tile,doors)
+        if (tile==34) return doors.top
+        if (tile==18) return doors.bottom
+        if (tile==33) return doors.left
+        if (tile==32) return doors.right
+      end,
+      type=function(self,tile)
+        if (tile==34) return "top"
+        if (tile==18) return "bottom"
+        if (tile==33) return "left"
+        if (tile==32) return "right"
+      end
+    }
+  end
+}
+
+-- fake switch tile/object ----
+
+fakeswitch={
+  new=function(self,x,y)
+    return {
+      x=x,
+      y=y,
+      bg=true,
+      switch=true,
+      traversable=true,
+      draw=function(self,x,y)
+        spr(9,x,y)
+      end,
+      covered=function(self,by)
+        if by.stone then
+          by:on(self)
+        end
+      end,
+      uncovered=function()
+        --nothing
+      end
+    }
+  end
+}
+
+-- key tile/object ------------
+
+key={
+  new=function(self,x,y)
+    return {
+      x=x,
+      y=y,
+      item=true,
+      moveable=true,
+      draw=function(self,x,y)
+        spr(6,x,y)
+      end,
+      taken=function(self,by)
+        --todo
+      end
+    }
+  end
+}
+
 -- level ----------------------
 
 level={
@@ -185,93 +271,7 @@ message={
   end
 }
 
--- object:door ----------------
-
-door={
-  new=function(self,x,y,tile)
-    return {
-      x=x,
-      y=y,
-      bg=true,
-      door=true,
-      traversable=true,
-      -- door_to=door:to(i,room.doors),
-      -- door_type=door:type(i),
-      -- next_door=door:next_type(i)
-      draw=function(self,x,y)
-        spr(tile,x,y)
-      end,
-      go=function(self,to)
-        --todo
-        -- rooms:start(orig.door_to,orig.door_type)
-      end,
-      next=function(self,tile)
-        if (tile==34) return "bottom"
-        if (tile==18) return "top"
-        if (tile==33) return "right"
-        if (tile==32) return "left"
-      end,
-      to=function(self,tile,doors)
-        if (tile==34) return doors.top
-        if (tile==18) return doors.bottom
-        if (tile==33) return doors.left
-        if (tile==32) return doors.right
-      end,
-      type=function(self,tile)
-        if (tile==34) return "top"
-        if (tile==18) return "bottom"
-        if (tile==33) return "left"
-        if (tile==32) return "right"
-      end
-    }
-  end
-}
-
--- object:fake switch ---------
-
-fakeswitch={
-  new=function(self,x,y)
-    return {
-      x=x,
-      y=y,
-      bg=true,
-      switch=true,
-      traversable=true,
-      draw=function(self,x,y)
-        spr(9,x,y)
-      end,
-      covered=function(self,by)
-        if by.stone then
-          by:on(self)
-        end
-      end,
-      uncovered=function()
-        --nothing
-      end
-    }
-  end
-}
-
--- object:key -----------------
-
-key={
-  new=function(self,x,y)
-    return {
-      x=x,
-      y=y,
-      item=true,
-      moveable=true,
-      draw=function(self,x,y)
-        spr(6,x,y)
-      end,
-      taken=function(self,by)
-        --todo
-      end
-    }
-  end
-}
-
--- object:player --------------
+-- player tile/object ---------
 
 player={
   new=function(self,x,y)
@@ -325,7 +325,7 @@ player={
   end
 }
 
--- object:power bracelet ------
+-- power bracelet tile/object -
 
 pbracelet={
   new=function(self,x,y)
@@ -344,7 +344,7 @@ pbracelet={
   end
 }
 
--- object:secret wall ---------
+-- secret wall tile/object ----
 
 secretwall={
   new=function(self,x,y,tile)
@@ -358,7 +358,7 @@ secretwall={
   end
 }
 
--- object:stone ---------------
+-- stone tile/object ----------
 
 stone={
   new=function(self,x,y)
@@ -394,7 +394,7 @@ stone={
   end
 }
 
--- object:switch -------------
+-- switch tile/object ---------
 
 switch={
   new=function(self,x,y)
@@ -420,7 +420,7 @@ switch={
   end
 }
 
--- object:text on a wall ------
+-- wall text tile/object ------
 
 text={
   new=function(self,x,y)
@@ -437,7 +437,7 @@ text={
   end
 }
 
--- object:wall ---------------
+-- wall tile/object -----------
 
 wall={
   new=function(self,x,y,tile)
