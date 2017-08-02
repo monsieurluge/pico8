@@ -16,12 +16,17 @@ end
 function _draw()
   level:draw()
   message:draw()
+  color(12)
+  if (temp) print(temp)
+  -- for o in all(level.objects) do
+  --   if (o.door) print(o.door_type)
+  -- end
 end
 
 -- controls -------------------
 
 controls={
-  addplayer=function(self,target)
+  addexplorer=function(self,target)
     self.player=target
   end,
   update=function(self)
@@ -50,33 +55,74 @@ door={
       bg=true,
       door=true,
       traversable=true,
-      -- door_to=door:to(i,room.doors),
-      -- door_type=door:type(i),
-      -- next_door=door:next_type(i)
       draw=function(self,x,y)
         spr(tile,x,y)
       end,
-      go=function(self,to)
-        --todo
-        -- rooms:start(orig.door_to,orig.door_type)
+      enters=function(self,from)
+        if (tile==18 and from==34)
+        or (tile==34 and from==18)
+        or (tile==32 and from==33)
+        or (tile==33 and from==32)
+        then
+          local expl=explorer:new(self.x,self.y,player)
+          controls:addexplorer(expl)
+          add(level.objects,expl)
+        end
       end,
-      next=function(self,tile)
-        if (tile==34) return "bottom"
-        if (tile==18) return "top"
-        if (tile==33) return "right"
-        if (tile==32) return "left"
+      go=function(self)
+        rooms:go(tile)
+      end
+    }
+  end
+}
+
+-- explorer tile/object -------
+
+explorer={
+  new=function(self,x,y,plyr)
+    return {
+      x=x,
+      y=y,
+      explorer=true,
+      moveable=true,
+      draw=function(self,x,y)
+        spr(1,x,y)
+        self:draw_inventory()
       end,
-      to=function(self,tile,doors)
-        if (tile==34) return doors.top
-        if (tile==18) return doors.bottom
-        if (tile==33) return doors.left
-        if (tile==32) return doors.right
+      draw_inventory=function(self)
+        nb=0
+        for item in all(plyr.inventory) do
+          spr(16,nb*9+1,119)
+          item:draw(nb*9+1,119)
+          nb+=1
+        end
       end,
-      type=function(self,tile)
-        if (tile==34) return "top"
-        if (tile==18) return "bottom"
-        if (tile==33) return "left"
-        if (tile==32) return "right"
+      increasepower=function(self,value)
+        plyr.power+=value
+      end,
+      move_left=function(self)
+        level:move_to(self,-1,0,plyr.power)
+      end,
+      move_right=function(self)
+        level:move_to(self,1,0,plyr.power)
+      end,
+      move_up=function(self)
+        level:move_to(self,0,-1,plyr.power)
+      end,
+      move_down=function(self)
+        level:move_to(self,0,1,plyr.power)
+      end,
+      moved_on=function(self,targets)
+        message:hide()
+        for obj in all(targets) do
+          if (obj.item) self:take(obj)
+          if (obj.door) obj:go(obj)
+        end
+      end,
+      take=function(self,item)
+        add(plyr.inventory,item)
+        item:taken(self)
+        del(level.objects,item)
       end
     }
   end
@@ -138,7 +184,7 @@ level={
     self.from=from
     self.objects={}
     self.switches=0
-    self:make()
+    self:make(from)
   end,
   at=function(self,x,y)
     local objs={}
@@ -196,20 +242,15 @@ level={
       and y >= 1
       and y <= self.height
   end,
-  make=function(self)
+  make=function(self,from)
     for x=1,self.width do
       for y=1,self.height do
         tiles:new(mget(x-1+self.x,y-1+self.y),x,y)
       end
     end
-    -- if from then
-    --   for o in all(self.objects) do
-    --     if (o.player) del(self.objects,o)
-    --     if o.next_door==self.from then
-    --       new_obj(1,o.x,o.y)
-    --     end
-    --   end
-    -- end
+    for o in all(self.objects) do
+      if (o.door) o:enters(from)
+    end
     foreach(
       self.objects,
       function(obj)
@@ -274,55 +315,8 @@ message={
 -- player tile/object ---------
 
 player={
-  new=function(self,x,y)
-    return {
-      x=x,
-      y=y,
-      inventory={},
-      player=true,
-      power=1,
-      moveable=true,
-      draw=function(self,x,y)
-        spr(1,x,y)
-        self:draw_inventory()
-      end,
-      draw_inventory=function(self)
-        nb=0
-        for item in all(self.inventory) do
-          spr(16,nb*9+1,119)
-          item:draw(nb*9+1,119)
-          nb+=1
-        end
-      end,
-      increasepower=function(self,value)
-        self.power+=value
-      end,
-      move_left=function(self)
-        level:move_to(self,-1,0,self.power)
-      end,
-      move_right=function(self)
-        level:move_to(self,1,0,self.power)
-      end,
-      move_up=function(self)
-        level:move_to(self,0,-1,self.power)
-      end,
-      move_down=function(self)
-        level:move_to(self,0,1,self.power)
-      end,
-      moved_on=function(self,targets)
-        message:hide()
-        for obj in all(targets) do
-          if (obj.item) self:take(obj)
-          if (obj.door) obj.target:go(obj)
-        end
-      end,
-      take=function(self,item)
-        add(self.inventory,item)
-        item:taken(self)
-        del(level.objects,item)
-      end
-    }
-  end
+  inventory={},
+  power=1
 }
 
 -- power bracelet tile/object -
@@ -431,7 +425,7 @@ text={
         spr(39,x,y)
       end,
       touched=function(by)
-        if (by.player) message:show()
+        if (by.explorer) message:show()
       end
     }
   end
@@ -455,6 +449,16 @@ wall={
 -- rooms ---------------------
 
 rooms={
+  go=function(self,from)
+    if (from==18) self:start(room.doors.bottom, from)
+    if (from==32) self:start(room.doors.right, from)
+    if (from==33) self:start(room.doors.left, from)
+    if (from==34) self:start(room.doors.top, from)
+  end,
+  start=function(self,nb,from)
+    room=self[nb]
+    level:init(from)
+  end,
   {
     nb=1,
     size={x=0,y=0,w=15,h=15},
@@ -468,16 +472,11 @@ rooms={
     doors={bottom=1,right=3}
   },
   {
-    nb=2,
+    nb=3,
     size={x=21,y=1,w=5,h=7},
     doors={left=2}
   }
 }
-
-function rooms:start(nb,from)
-  room=self[nb]
-  level:init(from)
-end
 
 -- tiles ----------------------
 
@@ -514,9 +513,9 @@ end
 
 tiles[1]={
   new=function(x,y)
-    local plyr=player:new(x,y)
-    controls:addplayer(plyr)
-    add(level.objects,plyr)
+    local expl=explorer:new(x,y,player)
+    controls:addexplorer(expl)
+    add(level.objects,expl)
   end
 }
 
@@ -710,10 +709,10 @@ __map__
 0050510000000000000000000000002622242610242525352525000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 006061000000142a160000000000002610343602242536003425000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000014153425361516000000002610001000343600000034000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000014242a2517252a26160000002531320002382102000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000014242a2517252a26160000002531320002202102000220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000002434352517253536260000002608000005141600000014000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000003425253425362525360000002515161214252516001425000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000034292517252736000000000000000000002525152525000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000034222517252736000000000000000000002525152525000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000003435360000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00142a1600000000000000142a16000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -868,3 +867,4 @@ __music__
 00 41424344
 00 41424344
 00 41424344
+
