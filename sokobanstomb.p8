@@ -48,10 +48,8 @@ controls={
 -- door tile/object -----------
 
 door={
-  new=function(self,x,y,tile)
+  new=function(self,tile)
     return {
-      x=x,
-      y=y,
       bg=true,
       door=true,
       traversable=true,
@@ -64,9 +62,9 @@ door={
         or (tile==32 and from==33)
         or (tile==33 and from==32)
         then
-          local expl=explorer:new(self.x,self.y,player)
+          local expl=explorer:new(player)
           controls:addexplorer(expl)
-          add(level.objects,expl)
+          level:add(expl,self.x,self.y)
         end
       end,
       go=function(self)
@@ -79,10 +77,8 @@ door={
 -- explorer tile/object -------
 
 explorer={
-  new=function(self,x,y,plyr)
+  new=function(self,plyr)
     return {
-      x=x,
-      y=y,
       explorer=true,
       moveable=true,
       draw=function(self,x,y)
@@ -131,10 +127,8 @@ explorer={
 -- fake switch tile/object ----
 
 fakeswitch={
-  new=function(self,x,y)
+  new=function(self)
     return {
-      x=x,
-      y=y,
       bg=true,
       switch=true,
       traversable=true,
@@ -156,10 +150,8 @@ fakeswitch={
 -- key tile/object ------------
 
 key={
-  new=function(self,x,y)
+  new=function(self)
     return {
-      x=x,
-      y=y,
       item=true,
       moveable=true,
       draw=function(self,x,y)
@@ -185,6 +177,11 @@ level={
     self.objects={}
     self.switches=0
     self:make(from)
+  end,
+  add=function(self,obj,x,y)
+    obj.x=x
+    obj.y=y
+    add(self.objects,obj)
   end,
   at=function(self,x,y)
     local objs={}
@@ -322,10 +319,8 @@ player={
 -- power bracelet tile/object -
 
 pbracelet={
-  new=function(self,x,y)
+  new=function(self)
     return {
-      x=x,
-      y=y,
       item=true,
       moveable=true,
       draw=function(self,x,y)
@@ -341,10 +336,8 @@ pbracelet={
 -- secret wall tile/object ----
 
 secretwall={
-  new=function(self,x,y,tile)
+  new=function(self,tile)
     return {
-      x=x,
-      y=y,
       draw=function(self,x,y)
         spr(tile,x,y)
       end
@@ -355,10 +348,8 @@ secretwall={
 -- stone tile/object ----------
 
 stone={
-  new=function(self,x,y)
+  new=function(self)
     return {
-      x=x,
-      y=y,
       moveable=true,
       stone=true,
       draw=function(self,x,y)
@@ -391,10 +382,8 @@ stone={
 -- switch tile/object ---------
 
 switch={
-  new=function(self,x,y)
+  new=function(self)
     return {
-      x=x,
-      y=y,
       bg=true,
       switch=true,
       traversable=true,
@@ -417,10 +406,8 @@ switch={
 -- wall text tile/object ------
 
 text={
-  new=function(self,x,y)
+  new=function(self)
     return {
-      x=x,
-      y=y,
       draw=function(self,x,y)
         spr(39,x,y)
       end,
@@ -434,10 +421,8 @@ text={
 -- wall tile/object -----------
 
 wall={
-  new=function(self,x,y,tile)
+  new=function(self,tile)
     return {
-      x=x,
-      y=y,
       bg=true,
       draw=function(self,x,y)
         spr(tile,x,y)
@@ -490,7 +475,7 @@ tiles={
 for nb in all({19,20,21,22,23,35,36,37,38,42,48,49,50,51,52,53,54,55}) do
   tiles[nb]={
     new=function(x,y)
-      add(level.objects,wall:new(x,y,nb))
+      level:add(wall:new(nb),x,y)
     end
   }
 end
@@ -498,7 +483,7 @@ end
 for nb in all({25,41,58,59}) do
   tiles[nb]={
     new=function(x,y)
-      add(level.objects,secretwall:new(x,y,nb))
+      level:add(secretwall:new(nb),x,y)
     end
   }
 end
@@ -506,68 +491,68 @@ end
 for nb in all({18,32,33,34}) do
   tiles[nb]={
     new=function(x,y)
-      add(level.objects,door:new(x,y,nb))
+      level:add(door:new(nb),x,y)
     end
   }
 end
 
 tiles[1]={
   new=function(x,y)
-    local expl=explorer:new(x,y,player)
+    local expl=explorer:new(player)
     controls:addexplorer(expl)
-    add(level.objects,expl)
+    level:add(expl,x,y)
   end
 }
 
 tiles[2]={
   new=function(x,y)
-    add(level.objects,stone:new(x,y))
+    level:add(stone:new(),x,y)
   end
 }
 
 tiles[3]={
   new=function(x,y)
-    add(level.objects,switch:new(x,y))
-    add(level.objects,stone:new(x,y))
+    level:add(switch:new(),x,y)
+    level:add(stone:new(),x,y)
     level.switches+=1
   end
 }
 
 tiles[4]={
   new=function(x,y)
-    add(level.objects,switch:new(x,y))
+    level:add(switch:new(),x,y)
     level.switches+=1
   end
 }
 
 tiles[5]={
   new=function(x,y)
-    add(level.objects,pbracelet:new(x,y))
+    level:add(pbracelet:new(),x,y)
   end
 }
 
 tiles[6]={
   new=function(x,y)
-    add(level.objects,key:new(x,y))
+    level:add(key:new(),x,y)
   end
 }
 
 tiles[9]={
   new=function(x,y)
-    add(level.objects,fakeswitch:new(x,y))
+    level:add(fakeswitch:new(),x,y)
   end
 }
 
 tiles[10]={
   new=function(x,y)
-    add(level.objects,fakeswitch:new(x,y))
-    add(level.objects,stone:new(x,y))
+    level:add(fakeswitch:new(),x,y)
+    level:add(stone:new(),x,y)
   end
 }
 
 tiles[39]={
   new=function(x,y)
-    add(level.objects,text:new(x,y))
+    level:add(text:new(),x,y)
   end
 }
 
@@ -867,4 +852,3 @@ __music__
 00 41424344
 00 41424344
 00 41424344
-
