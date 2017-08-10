@@ -9,14 +9,20 @@ function _init()
   rooms:start(1)
 end
 
-function _update()
-  controls:update()
-end
-
 function _draw()
   level:draw()
   message:draw()
 end
+
+function _update()
+  controls:update()
+end
+
+function restart_room()
+  --todo
+end
+
+menuitem(1, "restart room", restart_room)
 
 -- controls -------------------
 
