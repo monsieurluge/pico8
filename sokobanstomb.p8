@@ -10,7 +10,7 @@ function _init()
 end
 
 function _draw()
-  level:draw()
+  room:draw()
   message:draw()
 end
 
@@ -65,7 +65,7 @@ door={
         then
           local expl=explorer:new(player)
           controls:addexplorer(expl)
-          level:add(expl,self.x,self.y)
+          room:add(expl,self.x,self.y)
         end
       end,
       go=function(self)
@@ -98,16 +98,16 @@ explorer={
         plyr.power+=value
       end,
       move_left=function(self)
-        level:move_to(self,-1,0,plyr.power)
+        room:move_to(self,-1,0,plyr.power)
       end,
       move_right=function(self)
-        level:move_to(self,1,0,plyr.power)
+        room:move_to(self,1,0,plyr.power)
       end,
       move_up=function(self)
-        level:move_to(self,0,-1,plyr.power)
+        room:move_to(self,0,-1,plyr.power)
       end,
       move_down=function(self)
-        level:move_to(self,0,1,plyr.power)
+        room:move_to(self,0,1,plyr.power)
       end,
       moved_on=function(self,targets)
         message:hide()
@@ -119,7 +119,7 @@ explorer={
       take=function(self,item)
         add(plyr.inventory,item)
         item:taken(self)
-        del(level.objects,item)
+        del(room.objects,item)
       end
     }
   end
@@ -165,15 +165,67 @@ key={
   end
 }
 
--- level ----------------------
+-- message --------------------
 
-level={
-  init=function(self,from)
-    local size=room.size
-    self.x=size.x
-    self.y=size.y
-    self.width=size.w
-    self.height=size.h
+message={
+  state=-12,
+  draw=function(self)
+    if self.state<0 and self.action=="show" then
+      self.state+=2
+    end
+    if self.state>-12 and self.action=="hide" then
+      self.state-=2
+    end
+    if (self.state==-12) return
+    rectfill(0,self.state,127,self.state+10,1)
+    rect(0,self.state,127,self.state+10,5)
+    color(9)
+    local text=room.text
+    print(text,(126-#text*4)/2+1,self.state+3)
+  end,
+  hide=function(self)
+    self.action="hide"
+  end,
+  show=function(self)
+    self.action="show"
+  end
+}
+
+-- player ---------------------
+
+player={
+  inventory={},
+  power=1
+}
+
+-- power ----------------------
+
+pbracelet={
+  new=function(self)
+    return {
+      item=true,
+      moveable=true,
+      draw=function(self,x,y)
+        spr(5,x,y)
+      end,
+      taken=function(self,by)
+        by:increasepower(1)
+      end
+    }
+  end
+}
+
+-- room ----------------------
+
+room={
+  init=function(self,def,from)
+    self.x=def.size.x
+    self.y=def.size.y
+    self.width=def.size.w
+    self.height=def.size.h
+    self.doors=def.doors
+    self.text=def.text
+    self.triggers=def.triggers
     self.from=from
     self.objects={}
     self.switches=0
@@ -253,7 +305,7 @@ level={
       self.objects,
       function(obj)
         foreach(
-          level:at(obj.x,obj.y),
+          room:at(obj.x,obj.y),
           function(target)
             if type(target.covered)=="function" then
               target:covered(obj)
@@ -265,7 +317,7 @@ level={
   end,
   move=function(self,obj,dx,dy)
     if type(obj.leave)=="function" then
-      obj:leave(level:at(obj.x,obj.y))
+      obj:leave(room:at(obj.x,obj.y))
     end
     obj.x+=dx
     obj.y+=dy
@@ -286,54 +338,35 @@ level={
   end
 }
 
--- message --------------------
+-- rooms ---------------------
 
-message={
-  state=-12,
-  draw=function(self)
-    if self.state<0 and self.action=="show" then
-      self.state+=2
-    end
-    if self.state>-12 and self.action=="hide" then
-      self.state-=2
-    end
-    if (self.state==-12) return
-    rectfill(0,self.state,127,self.state+10,1)
-    rect(0,self.state,127,self.state+10,5)
-    color(9)
-    local text=room.text
-    print(text,(126-#text*4)/2+1,self.state+3)
+rooms={
+  go=function(self,from)
+    if (from==18) self:start(room.doors.bottom, from)
+    if (from==32) self:start(room.doors.right, from)
+    if (from==33) self:start(room.doors.left, from)
+    if (from==34) self:start(room.doors.top, from)
   end,
-  hide=function(self)
-    self.action="hide"
+  start=function(self,nb,from)
+    room:init(self[nb],from)
   end,
-  show=function(self)
-    self.action="show"
-  end
-}
-
--- player ---------------------
-
-player={
-  inventory={},
-  power=1
-}
-
--- power ----------------------
-
-pbracelet={
-  new=function(self)
-    return {
-      item=true,
-      moveable=true,
-      draw=function(self,x,y)
-        spr(5,x,y)
-      end,
-      taken=function(self,by)
-        by:increasepower(1)
-      end
-    }
-  end
+  {
+    nb=1,
+    size={x=0,y=0,w=15,h=15},
+    doors={top=2},
+    triggers={switch="top"},
+    text="3 stones,an arrow to the north"
+  },
+  {
+    nb=2,
+    size={x=15,y=0,w=6,h=7},
+    doors={bottom=1,right=3}
+  },
+  {
+    nb=3,
+    size={x=21,y=1,w=5,h=7},
+    doors={left=2}
+  }
 }
 
 -- secret wall ----------------
@@ -395,12 +428,12 @@ switch={
       end,
       covered=function(self,by)
         if by.stone then
-          level:switchon()
+          room:switchon()
           by:on(self)
         end
       end,
       uncovered=function()
-        level:switchoff()
+        room:switchoff()
       end
     }
   end
@@ -434,38 +467,6 @@ wall={
   end
 }
 
--- rooms ---------------------
-
-rooms={
-  go=function(self,from)
-    if (from==18) self:start(room.doors.bottom, from)
-    if (from==32) self:start(room.doors.right, from)
-    if (from==33) self:start(room.doors.left, from)
-    if (from==34) self:start(room.doors.top, from)
-  end,
-  start=function(self,nb,from)
-    room=self[nb]
-    level:init(from)
-  end,
-  {
-    nb=1,
-    size={x=0,y=0,w=15,h=15},
-    doors={top=2},
-    triggers={switch="top"},
-    text="3 stones,an arrow to the north"
-  },
-  {
-    nb=2,
-    size={x=15,y=0,w=6,h=7},
-    doors={bottom=1,right=3}
-  },
-  {
-    nb=3,
-    size={x=21,y=1,w=5,h=7},
-    doors={left=2}
-  }
-}
-
 -- tiles ----------------------
 
 tiles={
@@ -478,7 +479,7 @@ tiles={
 for nb in all({19,20,21,22,23,35,36,37,38,42,48,49,50,51,52,53,54,55}) do
   tiles[nb]={
     new=function(x,y)
-      level:add(wall:new(nb),x,y)
+      room:add(wall:new(nb),x,y)
     end
   }
 end
@@ -486,7 +487,7 @@ end
 for nb in all({25,41,58,59}) do
   tiles[nb]={
     new=function(x,y)
-      level:add(secretwall:new(nb),x,y)
+      room:add(secretwall:new(nb),x,y)
     end
   }
 end
@@ -494,7 +495,7 @@ end
 for nb in all({18,32,33,34}) do
   tiles[nb]={
     new=function(x,y)
-      level:add(door:new(nb),x,y)
+      room:add(door:new(nb),x,y)
     end
   }
 end
@@ -503,59 +504,59 @@ tiles[1]={
   new=function(x,y)
     local expl=explorer:new(player)
     controls:addexplorer(expl)
-    level:add(expl,x,y)
+    room:add(expl,x,y)
   end
 }
 
 tiles[2]={
   new=function(x,y)
-    level:add(stone:new(),x,y)
+    room:add(stone:new(),x,y)
   end
 }
 
 tiles[3]={
   new=function(x,y)
-    level:add(switch:new(),x,y)
-    level:add(stone:new(),x,y)
-    level.switches+=1
+    room:add(switch:new(),x,y)
+    room:add(stone:new(),x,y)
+    room.switches+=1
   end
 }
 
 tiles[4]={
   new=function(x,y)
-    level:add(switch:new(),x,y)
-    level.switches+=1
+    room:add(switch:new(),x,y)
+    room.switches+=1
   end
 }
 
 tiles[5]={
   new=function(x,y)
-    level:add(pbracelet:new(),x,y)
+    room:add(pbracelet:new(),x,y)
   end
 }
 
 tiles[6]={
   new=function(x,y)
-    level:add(key:new(),x,y)
+    room:add(key:new(),x,y)
   end
 }
 
 tiles[9]={
   new=function(x,y)
-    level:add(fakeswitch:new(),x,y)
+    room:add(fakeswitch:new(),x,y)
   end
 }
 
 tiles[10]={
   new=function(x,y)
-    level:add(fakeswitch:new(),x,y)
-    level:add(stone:new(),x,y)
+    room:add(fakeswitch:new(),x,y)
+    room:add(stone:new(),x,y)
   end
 }
 
 tiles[39]={
   new=function(x,y)
-    level:add(text:new(),x,y)
+    room:add(text:new(),x,y)
   end
 }
 
