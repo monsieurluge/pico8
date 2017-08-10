@@ -40,7 +40,7 @@ controls={
   end
 }
 
--- door tile/object -----------
+-- door -----------------------
 
 door={
   new=function(self,tile)
@@ -69,7 +69,7 @@ door={
   end
 }
 
--- explorer tile/object -------
+-- explorer -------------------
 
 explorer={
   new=function(self,plyr)
@@ -119,7 +119,7 @@ explorer={
   end
 }
 
--- fake switch tile/object ----
+-- fake -----------------------
 
 fakeswitch={
   new=function(self)
@@ -142,7 +142,7 @@ fakeswitch={
   end
 }
 
--- key tile/object ------------
+-- key ------------------------
 
 key={
   new=function(self)
@@ -306,14 +306,14 @@ message={
   end
 }
 
--- player tile/object ---------
+-- player ---------------------
 
 player={
   inventory={},
   power=1
 }
 
--- power bracelet tile/object -
+-- power ----------------------
 
 pbracelet={
   new=function(self)
@@ -330,7 +330,7 @@ pbracelet={
   end
 }
 
--- secret wall tile/object ----
+-- secret wall ----------------
 
 secretwall={
   new=function(self,tile)
@@ -342,7 +342,7 @@ secretwall={
   end
 }
 
--- stone tile/object ----------
+-- stone ----------------------
 
 stone={
   new=function(self)
@@ -376,7 +376,7 @@ stone={
   end
 }
 
--- switch tile/object ---------
+-- switch ---------------------
 
 switch={
   new=function(self)
@@ -400,7 +400,7 @@ switch={
   end
 }
 
--- wall text tile/object ------
+-- wall text ------------------
 
 text={
   new=function(self)
@@ -415,7 +415,7 @@ text={
   end
 }
 
--- wall tile/object -----------
+-- wall -----------------------
 
 wall={
   new=function(self,tile)
@@ -849,4 +849,3 @@ __music__
 00 41424344
 00 41424344
 00 41424344
-
