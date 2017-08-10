@@ -19,7 +19,7 @@ function _update()
 end
 
 function restart_room()
-  --todo
+  rooms:start(room.nb,room.from)
 end
 
 menuitem(1, "restart room", restart_room)
