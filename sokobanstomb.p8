@@ -549,6 +549,48 @@ text={
   end
 }
 
+-- triggers --------------------
+
+triggers={
+  new=function(self)
+    return {
+      triggers={},
+      send=function(self,message)
+        for t in all(self.triggers) do
+          t:activate(message)
+        end
+      end
+    }
+  end
+}
+
+platetrigger={
+  new=function(self)
+    return {
+      activate=function(self,message)
+        -- todo
+      end,
+      enable=function(self)
+        -- nothing
+      end
+    }
+  end
+}
+
+stonetrigger={
+  new=function(self)
+    return {
+      switches=0,
+      activate=function(self,message)
+        -- todo
+      end,
+      enable=function(self,switches)
+        self.switches=switches
+      end
+    }
+  end
+}
+
 -- wall ------------------------
 
 wall={
