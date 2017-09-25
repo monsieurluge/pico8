@@ -25,13 +25,55 @@ background=function()
   end
 end
 
+box={
+  new=function(self,sprite)
+    return {
+      sprite=sprite
+    }
+  end
+}
+
 build=function(def)
   return stage:new(
     def.width,
     def.height,
-    wallsfromdef(def),
+    groundelements(def),
     objectsfromdef(def)
   )
+end
+
+ground={
+  new=function(self)
+    return {
+      sprite=19,
+      traversable=true
+    }
+  end
+}
+
+groundelement=function(id)
+  if isin(id,{16,17,18,20,32,33,34,35,36,37,48,49,50,52}) then
+    return wall:new(id)
+  elseif isin(id,{3, 4}) then
+    return switch:new(id)
+  else
+    return ground:new()
+  end
+end
+
+groundelements=function(def)
+  local elements={}
+  for x=1,def.width do
+    elements[x]={}
+  end
+  for y=1,def.height do
+    for x=1,def.width do
+      elements[x][y]=groundelement(
+        mget(x-1,y-1)
+      )
+    end
+  end
+  return elements
 end
 
 isin=function(item,list)
@@ -66,16 +108,31 @@ objects={
 
 objectsfromdef=function(def)
   local objects={}
-  -- for x=1,def.width do
-  --   objects[x]={}
-  -- end
-  -- for y=1,def.height do
-  --   for x=1,def.width do
-  --     objects[x][y]=mget(x-1,y-1)
-  --   end
-  -- end
+  for y=1,def.height do
+    for x=1,def.width do
+      local id=mget(x-1,y-1)
+      if id==1 then
+        -- player
+        add(objects,{sprite=1,x=x,y=y})
+      elseif id==2 then
+        -- box
+        add(objects,{sprite=2,x=x,y=y})
+      elseif id==3 then
+        -- placed box
+        add(objects,{sprite=2,x=x,y=y})
+      end
+    end
+  end
   return objects
 end
+
+player={
+  new=function(self)
+    return {
+      sprit=1
+    }
+  end
+}
 
 sokoban={
   new=function(self)
@@ -102,20 +159,20 @@ stage={
       draw=function(self)
         -- background
         rectfill(0,0,self.width*8-1,self.height*8-1,0)
-        -- walls
+        -- ground elements
         for y=1,self.height do
           for x=1,self.width do
-            wall=walls[x][y]
-            if (wall) spr(wall,x*8-8,y*8-8)
+            spr(walls[x][y].sprite,x*8-8,y*8-8)
           end
         end
         -- objects
-        -- for y=1,self.height do
-        --   for x=1,self.width do
-        --
-        --     spr(walls[x][y],x*8,y*8)
-        --   end
-        -- end
+        for obj in all(self.objects) do
+          spr(
+            obj.sprite,
+            obj.x*8-8,
+            obj.y*8-8
+          )
+        end
       end,
       start=function(self)
         -- todo
@@ -131,22 +188,23 @@ stagesdef=function(nb)
   return stagesdef[nb]
 end
 
-wallsfromdef=function(def)
-  local walls={}
-  for x=1,def.width do
-    walls[x]={}
+switch={
+  new=function(self)
+    return {
+      sprite=4,
+      traversable=true
+    }
   end
-  for y=1,def.height do
-    for x=1,def.width do
-      if isin(
-        mget(x-1,y-1),
-        {16,17,18,20,32,33,34,35,36,37,48,49,50,52}) then
-        walls[x][y]=mget(x-1,y-1)
-      end
-    end
+}
+
+wall={
+  new=function(self,sprite)
+    return {
+      sprite=sprite,
+      traversable=false
+    }
   end
-  return walls
-end
+}
 
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
