@@ -4,12 +4,12 @@ __lua__
 
 function _draw()
   background()
-  current:draw()
+  game:draw()
+  glitch(90)
 end
 
 function _init()
-  game=sokoban:new()
-  game:start()
+  game=sokoban:new():start()
 end
 
 function _update()
@@ -17,7 +17,6 @@ function _update()
 end
 
 background=function()
-  cls()
   for y=0,15 do
     for x=0,15 do
       spr(33,x*8,y*8)
@@ -49,6 +48,20 @@ build=function(def)
     groundelements(def),
     objectsfromdef(def)
   )
+end
+
+glitch=function(threshold)
+  if (flr(rnd(100))<threshold) return
+  for n=1,flr(rnd(3)) do
+    local xpow=flr(rnd(4))
+    local ypow=flr(rnd(3))
+    local y=flr(rnd(128))
+    for n=128,0,-1 do
+      for ny=1,ypow do
+        pset(n,y+ny,pget(n-xpow,y+ny))
+      end
+    end
+  end
 end
 
 ground={
@@ -125,11 +138,24 @@ sokoban={
   new=function(self)
     return {
       nb=1,
+      draw=function(self)
+        self.stage:draw()
+      end,
+      pause=function(self)
+        return self
+        -- todo
+      end,
       start=function(self)
-        current=build(stagesdef(self.nb))
-        current:start()
+        self.stage=build(stagesdef(self.nb))
+        self.stage:start()
+        return self
       end,
       stop=function(self)
+        return self
+        -- todo
+      end,
+      unpause=function(self)
+        return self
         -- todo
       end
     }
