@@ -8,11 +8,11 @@ function _draw()
 end
 
 function _init()
-  game=sokoban:new():run()
+  game=sokoban:new(controls):run()
 end
 
 function _update()
-  -- todo
+  game:update()
 end
 
 background=function()
@@ -46,6 +46,19 @@ build=function(def,nb)
     def.name
   )
 end
+
+controls={
+  new=function(self,receiver)
+    return {
+      update=function(self)
+        if (btnp(0)) receiver:left()
+        if (btnp(1)) receiver:right()
+        if (btnp(2)) receiver:up()
+        if (btnp(3)) receiver:down()
+      end
+    }
+  end
+}
 
 ground={
   new=function(self)
@@ -118,7 +131,7 @@ player={
 }
 
 sokoban={
-  new=function(self)
+  new=function(self,controls)
     return {
       nb=1,
       display=function(self)
@@ -139,6 +152,11 @@ sokoban={
           self.nb
         ):start()
         self.ui=ui:new(self.stage)
+        self.controls=controls:new(self.stage)
+        return self
+      end,
+      update=function(self)
+        self.controls.update()
         return self
       end
     }
@@ -173,14 +191,26 @@ stage={
       start=function(self)
         return self
         -- todo
-      end
+      end,
+      down=function(self)
+        temp="down"
+      end,
+      left=function(self)
+        temp="left"
+      end,
+      right=function(self)
+        temp="right"
+      end,
+      up=function(self)
+        temp="up"
+      end,
     }
   end
 }
 
 stagesdef=function(nb)
   local stagesdef={
-    {x=0,y=0,width=9,height=7,name="the start!"}
+    {x=0,y=0,width=9,height=7,name="the start"}
   }
   return stagesdef[nb]
 end
@@ -205,6 +235,8 @@ ui={
         color(7)
         print(stage:infos(),2,120)
         -- todo
+        color(2)
+        if (temp) print(temp,1,1)
       end
     }
   end
