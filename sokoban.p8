@@ -56,9 +56,15 @@ function coords(i,j)
 end
 
 function canmove(pos,move)
- local dest=stage.ground[pos.x+move.x][pos.y+move.y]
- if (dest==nil) return true
- return not fget(dest.id,0)
+ local dx=pos.x+move.x
+ local dy=pos.y+move.y
+ local next=stage:atpos(dx,dy)
+
+	if (next==nil) return true
+ 
+ if (fget(next.id,2)) return false
+ 
+ return not fget(next.id,0)
 end
 -->8
 --factories
@@ -69,8 +75,16 @@ function newstage(lvl)
  }
 
  stage=stages[lvl]
+ 
  stage.ground=loadground(stage.x,stage.y,stage.w,stage.h)
  stage.elements=loadelements(stage.x,stage.y,stage.w,stage.h)
+ 
+ stage.atpos=function(self,x,y)
+  if self.elements[x][y]==nil then
+   return self.ground[x][y]
+  end
+  return self.elements[x][y]
+ end
 end
 
 function newgrdelement(id)
@@ -164,6 +178,7 @@ function drawstage()
  drawplayer()
  
  camera()
+ if (debug) print(debug,2,2,2)
 end
 
 function drawplayer()
@@ -199,10 +214,14 @@ end
 -->8
 --update functions
 function updateplayer()
+ dx=0
+ dy=0
+ 
  if (btnp(⬅️)) dx=-1
  if (btnp(➡️)) dx=1
  if (btnp(⬆️)) dy=-1
  if (btnp(⬇️)) dy=1
+ 
  if (canmove(player,{x=dx,y=dy},2)) then
   player.x+=dx
   player.y+=dy
