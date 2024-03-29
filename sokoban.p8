@@ -6,8 +6,8 @@ __lua__
 
 stages={
  {x=0,y=11,w=8,h=3,lvl=1,name="sokoban",lock=false},
- {x=0,y=17,w=9,h=7,lvl=1,name="the start",lock=true},
- {x=0,y=25,w=9,h=7,lvl=1,name="wtf?",lock=true},
+ {x=0,y=17,w=9,h=7,lvl=2,name="the start",lock=true},
+ {x=0,y=25,w=9,h=7,lvl=5,name="wtf?",lock=true},
  {x=11,y=0,w=5,h=3,lvl=1,name="filler",lock=true},
  {x=11,y=0,w=5,h=3,lvl=1,name="filler",lock=true},
  {x=11,y=0,w=5,h=3,lvl=1,name="filler",lock=true},
@@ -48,8 +48,28 @@ function _init()
  player={x=0,y=0}
  offset={x=0,y=0}
  selection={x=1,y=1,nb=1}
+ load_mini(1)
  _upd=upd_intro
  _drw=drw_intro
+end
+
+function load_mini(nb)
+ local s=stages[nb]
+ local mini={}
+ for x=0,s.w-1 do
+  mini[x]={}
+  for y=0,s.h-1 do
+   local tile=mget(s.x+x,s.y+y)
+   local clr=7
+   if tile==1 then clr=12 end
+   if tile==2 then clr=9 end
+   if tile==3 then clr=9 end
+   if tile==4 then clr=8 end
+   if tile>15 then clr=13 end
+   mini[x][y]=clr
+  end
+ end
+ stages[nb].mini=mini
 end
 
 function load_stage(nb)
@@ -188,6 +208,9 @@ function unlock_neighbours(x,y)
   local ny=mid(1,y+d.y,6)
   local nb=nx+(ny-1)*6
   stages[nb].lock=false
+  if not stages[nb].mini then
+   load_mini(nb)
+  end
  end
 end
 
@@ -243,7 +266,7 @@ end
 function drw_stage_selection()
  cls(6)
  for i=1,#stages do
-  draw_stage_mini(i)
+  draw_stage_card(i)
  end
  draw_selection()
 end
@@ -273,11 +296,11 @@ function draw_selection()
  if s.lock then
   print_info("???")
  else
-  print_info(s.name)
+  print_info(s.name.." ("..s.lvl.."★)")
  end
 end
 
-function draw_stage_mini(nb)
+function draw_stage_card(nb)
 	local s=stages[nb]
  local x=(nb-1)%6+1
  local y=flr((nb-1)/6)+1
@@ -286,10 +309,26 @@ function draw_stage_mini(nb)
  if s.lock then
   sspr(48,0,13,14,dx,dy,13,14)
   spr(38,dx+3,dy+3)
- elseif s.done then
+  return
+ end
+ if s.done then
   sspr(64,0,13,14,dx,dy,13,14)
  else
   sspr(48,0,13,14,dx,dy,13,14)
+ end
+ if s.mini then
+  draw_stage_mini(s,dx,dy)
+ end
+end
+
+function draw_stage_mini(s,dx,dy)
+ for x=0,s.w-1 do
+  for y=0,s.h-1 do
+   local clr=s.mini[x][y]
+   local px=x+dx+flr((9-s.w)/2)+2
+   local py=y+dy+flr((9-s.h)/2)+2
+   pset(px,py,clr)
+  end
  end
 end
 
