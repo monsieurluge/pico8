@@ -11,32 +11,32 @@ stages={
 }
 
 function _init()
- player = {x=0,y=0}
- offset = {x=0,y=0}
+ player={x=0,y=0}
+ offset={x=0,y=0}
  load_stage(1)
- _upd = upd_intro
- _drw = drw_intro
+ _upd=upd_intro
+ _drw=drw_intro
 end
 
 function load_stage(nb)
- stage = stages[nb]
- stage.goal = 0
- stage.nb = nb
- offset.x = 64-stage.w*4
- offset.y = 64-stage.h*4
+ stage=stages[nb]
+ stage.goal=0
+ stage.nb=nb
+ offset.x=64-stage.w*4
+ offset.y=64-stage.h*4
  for x=0,stage.w-1 do
   for y=0,stage.h-1 do
-   local tile = mget(stage.x+x,stage.y+y)
-   if tile == 1 then
-    player.x = x
-    player.y = y
+   local tile=mget(stage.x+x,stage.y+y)
+   if tile==1 then
+    player.x=x
+    player.y=y
     mset(x,y,5)
-   elseif tile == 0 then
+   elseif tile==0 then
     mset(x,y,5)
    else
     mset(x,y,tile)
-    if tile == 4 then
-     stage.goal += 1
+    if tile==4 then
+     stage.goal+=1
     end
    end
   end
@@ -44,9 +44,9 @@ function load_stage(nb)
 end
 
 function create_player()
- p = {}
- p.x = 0
- p.y = 0
+ p={}
+ p.x=0
+ p.y=0
 end
 
 -->8
@@ -58,6 +58,13 @@ end
 
 function upd_intro()
  if btnp(🅾️) then
+  _upd=upd_stage_selection
+  _drw=drw_stage_selection
+ end
+end
+
+function upd_stage_selection()
+ if btnp(🅾️) then
   _upd=upd_game
   _drw=drw_game
  end
@@ -65,16 +72,16 @@ end
 
 function upd_game()
  update_player()
- if stage.goal == 0 then
+ if stage.goal==0 then
   load_stage(stage.nb+1)
  end
 end
 
 function add_box(x,y)
- local tile = tile_at(x,y)
+ local tile=tile_at(x,y)
  if tile.goal then
   mset(x,y,3)
-  stage.goal -= 1
+  stage.goal-=1
   sfx(1)
  else
   mset(x,y,2)
@@ -82,9 +89,9 @@ function add_box(x,y)
 end
 
 function interact(dx,dy)
- local nx = player.x+dx
- local ny = player.y+dy
- local tile = tile_at(nx,ny)
+ local nx=player.x+dx
+ local ny=player.y+dy
+ local tile=tile_at(nx,ny)
  if tile.box and can_move(nx+dx,ny+dy) then
   remove_box(nx,ny,tile)
   add_box(nx+dx,ny+dy)
@@ -92,22 +99,22 @@ function interact(dx,dy)
 end
 
 function update_player()
- if (btnp() == 0) return
- local dx = 0
- local dy = 0
- if (btnp(⬅️)) dx = -1
- if (btnp(➡️)) dx = 1
- if (btnp(⬆️)) dy = -1
- if (btnp(⬇️)) dy = 1
- if (dx != 0 and dy != 0)
- or (dx == 0 and dy == 0) then
+ if (btnp()==0) return
+ local dx=0
+ local dy=0
+ if (btnp(⬅️)) dx=-1
+ if (btnp(➡️)) dx=1
+ if (btnp(⬆️)) dy=-1
+ if (btnp(⬇️)) dy=1
+ if (dx!=0 and dy!=0)
+ or (dx==0 and dy==0) then
   return
  end
- local nx = player.x+dx
- local ny = player.y+dy
+ local nx=player.x+dx
+ local ny=player.y+dy
  if can_move(nx,ny) then
-	 player.x = mid(0,nx,stage.w-1)
-	 player.y = mid(0,ny,stage.h-1)
+	 player.x=mid(0,nx,stage.w-1)
+	 player.y=mid(0,ny,stage.h-1)
 	 sfx(0)
 	else
 	 interact(dx,dy)
@@ -117,7 +124,7 @@ end
 function remove_box(x,y,tile)
  if tile.goal then
   mset(x,y,4)
-  stage.goal += 1
+  stage.goal+=1
   sfx(2)
  else
   mset(x,y,5)
@@ -136,6 +143,11 @@ function drw_intro()
  printc("sokoban",60,5)
  printc("by monsieurluge",66,5)
  printc("press 🅾️ to play",118,13)
+end
+
+function drw_stage_selection()
+ cls(6)
+ printc("...stages",60,5)
 end
 
 function drw_game()
@@ -159,7 +171,7 @@ function draw_ui()
  print(infos,3,121)
  color(7)
  print(infos,2,120)
- if stage.goal == 0 then
+ if stage.goal==0 then
   print("done!",2,2)
  end
 end
@@ -168,23 +180,23 @@ end
 -- tools
 
 function can_move(x,y)
- local tile = tile_at(x,y)
+ local tile=tile_at(x,y)
  return not tile.wall
   and not tile.box
 end
 
 function printc(txt,y,clr)
- local x = 64-(#txt/2)*4
+ local x=64-(#txt/2)*4
  print(txt,x,y,clr)
 end
 
 function tile_at(x,y)
- local t = {}
- local sprite = mget(x,y)
- t.id = sprite
- t.box = fget(sprite,2)
- t.goal = fget(sprite,1)
- t.wall = fget(sprite,0)
+ local t={}
+ local sprite=mget(x,y)
+ t.id=sprite
+ t.box=fget(sprite,2)
+ t.goal=fget(sprite,1)
+ t.wall=fget(sprite,0)
  return t
 end
 
@@ -367,7 +379,7 @@ __map__
 0404040404040404040404000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0404040404040404040404000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 2131313131313121000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-2201000200040320000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+2203010002000420000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 2111111111111121000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

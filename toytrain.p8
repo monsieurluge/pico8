@@ -6,8 +6,8 @@ __lua__
 
 function _init()
  cls()
- switch_state = 0
- train = {
+ switch_state=0
+ train={
   {x=64,y=8},
   {x=72,y=8},
   {x=80,y=8}
@@ -23,38 +23,38 @@ function _update()
 end
 
 function adv_switch()
- if (switch_state < 1) then
-  switch_state += 1
+ if (switch_state<1) then
+  switch_state+=1
  else
-  switch_state = 0
+  switch_state=0
  end
 end
 
 function move_segment(s,dir)
- spd = dir*2
- if (s.y == 8) then
-  if (s.x == 112) then
-   s.y += spd
+ spd=dir*2
+ if (s.y==8) then
+  if (s.x==112) then
+   s.y+=spd
   else
-   s.x += spd
+   s.x+=spd
   end
- elseif (s.x == 112) then
-  if (s.y == 112) then
-   s.x -= spd
+ elseif (s.x==112) then
+  if (s.y==112) then
+   s.x-=spd
   else
-   s.y += spd
+   s.y+=spd
   end
- elseif (s.y == 112) then
-  if (s.x == 8) then
-   s.y -= spd
+ elseif (s.y==112) then
+  if (s.x==8) then
+   s.y-=spd
   else
-   s.x -= spd
+   s.x-=spd
   end
- elseif(s.x ==8) then
-  if (s.y == 8) then
-   s.x += spd
+ elseif(s.x==8) then
+  if (s.y==8) then
+   s.x+=spd
   else
-   s.y -= spd
+   s.y-=spd
   end
  end
 end
@@ -73,7 +73,7 @@ function _draw()
 end
 
 function draw_switch()
- if (switch_state == 1) then
+ if (switch_state==1) then
   sspr(0,16,16,16,56,56,16,16)
  else
   sspr(64,16,16,16,56,56,16,16)
@@ -83,16 +83,17 @@ end
 function draw_train()
  local len=#train
  for s=1,len do
-  if (s == 1) then
-   sprite = 11
-  elseif (s == len) then
-   sprite = 13
+  if (s==1) then
+   sprite=11
+  elseif (s==len) then
+   sprite=13
   else
-   sprite = 12
+   sprite=12
   end
   spr(sprite,train[s].x,train[s].y)
  end
 end
+
 __gfx__
 00000000000000004444444444444444444444444444444444444444667666560dddddd00dddddd00dddddd00dddddd00dddddd00dddddd00000000000000000
 0000000000000000444444444444444446666666666666666666666465666666dd5dd5d0dd5dd5dd0d5dd5ddd555555dd555555dd555555d0000000000000000

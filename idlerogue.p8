@@ -3,27 +3,27 @@ version 42
 __lua__
 function _init()
  -- environment
- day = 2
- location = "coast"
+ day=2
+ location="coast"
  -- player
- px = 4
- py = 7
- life = 2
+ px=4
+ py=7
+ life=2
 end
 
 function _update()
  -- player movement
- local nx = px
- local ny = py
- if (btnp(⬅️)) nx -= 1
- if (btnp(➡️)) nx += 1
- if (btnp(⬆️)) ny -= 1
- if (btnp(⬇️)) ny += 1
+ local nx=px
+ local ny=py
+ if (btnp(⬅️)) nx-=1
+ if (btnp(➡️)) nx+=1
+ if (btnp(⬆️)) ny-=1
+ if (btnp(⬇️)) ny+=1
  -- effective movement
- if (nx != px or ny != py)
+ if (nx!=px or ny!=py)
  and can_go(nx,ny) then
-  px = mid(0,nx,8)
-  py = mid(0,ny,8)
+  px=mid(0,nx,8)
+  py=mid(0,ny,8)
   movement_sound(px,py)
  end
 end
@@ -66,24 +66,25 @@ function draw_ui()
  spr(4,36,36)
  spr(3,44,36)
 end
+
 -->8
 function can_go(x,y)
- local tile = mget(x,y)
- local iswall = fget(tile,0)
+ local tile=mget(x,y)
+ local iswall=fget(tile,0)
  return not iswall
 end
 
 function movement_sound(x,y)
- local tile = mget(x,y)
- if tile == 17
- or tile == 21 then
+ local tile=mget(x,y)
+ if tile==17
+ or tile==21 then
   sfx(0) -- sand like
  end
- if tile == 20 then
+ if tile==20 then
   sfx(1) -- water
  end
- 
 end
+
 __gfx__
 00000000000770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000770000000000000077000000770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

@@ -8,31 +8,31 @@ function _init()
  map_setup()
  make_player()
  
- game_win = false
- game_over = false
+ game_win=false
+ game_over=false
 end
 
 function make_player()
- p = {}
- p.x = 2
- p.y = 1
- p.sprite = 1
- p.keys = 0
+ p={}
+ p.x=2
+ p.y=1
+ p.sprite=1
+ p.keys=0
 end
 
 function map_setup()
- mapx = 0
- mapy = 0
- timer = 0
- anim_time = 30
+ mapx=0
+ mapy=0
+ timer=0
+ anim_time=30
  -- tile types
- wall = 0
- key = 1
- door = 2
- anim1 = 3
- anim2 = 4
- lose = 6
- win = 7
+ wall=0
+ key=1
+ door=2
+ anim1=3
+ anim2=4
+ lose=6
+ win=7
 end
 -->8
 function _update()
@@ -53,16 +53,16 @@ end
 
 function check_win_lose()
  if is_tile(win,p.x,p.y) then
-  game_win = true
-  game_over =true
+  game_win=true
+  game_over=true
  elseif is_tile(lose,p.x,p.y) then
-  game_win = false
-  game_over = true
+  game_win=false
+  game_over=true
  end
 end
 
 function get_key(x,y)
- p.keys += 1
+ p.keys+=1
  swap_tile(x,y)
  sfx(1)
 end
@@ -77,50 +77,50 @@ function interact(x,y)
 end
 
 function is_tile(tile_type,x,y)
- local tile = mget(x,y)
- local has_flag = fget(tile,tile_type)
+ local tile=mget(x,y)
+ local has_flag=fget(tile,tile_type)
 	return has_flag
 end
 
 function move_player()
- nx = p.x
- ny = p.y
- if (btnp(⬅️)) nx -= 1
- if (btnp(➡️)) nx += 1
- if (btnp(⬆️)) ny -= 1
- if (btnp(⬇️)) ny += 1
+ nx=p.x
+ ny=p.y
+ if (btnp(⬅️)) nx-=1
+ if (btnp(➡️)) nx+=1
+ if (btnp(⬆️)) ny-=1
+ if (btnp(⬇️)) ny+=1
  interact(nx,ny)
  if (can_move(nx,ny)) then
-  p.x = mid(0,nx,127)
-  p.y = mid(0,ny,63)
+  p.x=mid(0,nx,127)
+  p.y=mid(0,ny,63)
  else
   sfx(0)
  end
 end
 
 function open_door(x,y)
- if (p.keys == 0) return
- p.keys -= 1
+ if (p.keys==0) return
+ p.keys-=1
  swap_tile(x,y)
  sfx(2)
 end
 
 function swap_tile(x,y)
- local tile = mget(x,y)
+ local tile=mget(x,y)
  mset(x,y,tile+1)
 end
 
 function toggle_tiles()
- local play_swap_snd = false
- local play_unswap_snd = false
+ local play_swap_snd=false
+ local play_unswap_snd=false
  for x=mapx,mapx+15 do
   for y=mapy,mapy+15 do
    if is_tile(anim1,x,y) then
     swap_tile(x,y)
-    play_swap_snd = true
+    play_swap_snd=true
    elseif is_tile(anim2,x,y) then
     unswap_tile(x,y)
-    play_unswap_snd = true
+    play_unswap_snd=true
    end
   end
  end
@@ -133,16 +133,16 @@ function toggle_tiles()
 end
 
 function unswap_tile(x,y)
- local tile = mget(x,y)
+ local tile=mget(x,y)
  mset(x,y,tile-1)
 end
 
 function update_map()
- if timer < 0 then
+ if timer<0 then
   toggle_tiles()
-  timer = anim_time
+  timer=anim_time
  end
- timer -= 1
+ timer-=1
 end
 
 -->8
@@ -158,8 +158,8 @@ function _draw()
 end
 
 function draw_map()
-	mapx = flr(p.x/16)*16
-	mapy = flr(p.y/16)*16
+	mapx=flr(p.x/16)*16
+	mapy=flr(p.y/16)*16
  camera(mapx*8,mapy*8)
  map(0,0,0,0,128,64)
 end
@@ -179,8 +179,8 @@ function draw_win_lose()
 end
 
 function show_inventory()
- local invx = mapx*8+40
- local invy = mapy*8+8
+ local invx=mapx*8+40
+ local invy=mapy*8+8
  rectfill(invx,invy,invx+48,invy+24,0)
  print("inventory",invx+7,invy+4,7)
  print("keys "..p.keys,invx+12,invy+14,9) 

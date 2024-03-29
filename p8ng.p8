@@ -8,49 +8,50 @@ end
 function gameover()
  state="gameover"
  sfx(3)
- ballydir = 0
- ballxdir = 0
- ballx = 200
- bally = 0
+ ballydir=0
+ ballxdir=0
+ ballx=200
+ bally=0
 end
 
 function launchball()
- ballx = 101 + lives*8
- bally = 8
- ballxdir = randomxdir()
- ballydir = 3
- ballspeed = max(1,ballspeed/2) 
+ ballx=101+lives*8
+ bally=8
+ ballxdir=randomxdir()
+ ballydir=3
+ ballspeed=max(1,ballspeed/2) 
 end
 
 function resetgame()
- padx = 52
- pady = 122
- padw = 24
- padh = 4
- ballx = 200
- bally = 0
- ballsize = 3
- ballspeed = 1
- score = 0
- lives = 3
- state = "start"
+ padx=52
+ pady=122
+ padw=24
+ padh=4
+ ballx=200
+ bally=0
+ ballsize=3
+ ballspeed=1
+ score=0
+ lives=3
+ state="start"
 end
+
 -->8
 function _update()
- if state == "start" then
+ if state=="start" then
   if btnp(⬅️) or btnp(➡️) then
-   state = "run"
+   state="run"
    launchball()
-   lives -= 1
+   lives-=1
   end
  end
- if state == "gameover" then
+ if state=="gameover" then
   if btnp(❎) then
    resetgame()
-   state = "start"
+   state="start"
   end
  end
- if state == "run" then
+ if state=="run" then
   movepaddle()
   bounceball()
   bouncepaddle()
@@ -60,42 +61,42 @@ function _update()
 end
 
 function bounceball()
- if ballx < ballsize then
-  ballxdir = -ballxdir
+ if ballx<ballsize then
+  ballxdir=-ballxdir
   sfx(0)
  end
- if ballx > 128 - ballsize then
-  ballxdir = -ballxdir
+ if ballx>128-ballsize then
+  ballxdir=-ballxdir
   sfx(0) 
  end
- if bally < ballsize then
-  ballydir = -ballydir
+ if bally<ballsize then
+  ballydir=-ballydir
   sfx(0)
  end
 end
 
 function bouncepaddle()
- if ballydir > 0
- and ballx >= padx-1
- and ballx <= padx+padw+2
- and bally > pady-3 then
+ if ballydir>0
+ and ballx>=padx-1
+ and ballx<=padx+padw+2
+ and bally>pady-3 then
   sfx(1)
-  score += flr(10 * ballspeed)
-  ballspeed += 0.1
-  ballydir = -ballydir
-  bally = 122-ballsize
-  if ballx < padx+15 then
-   ballxdir = max(-5,ballxdir-1.2)
+  score+=flr(10 * ballspeed)
+  ballspeed+=0.1
+  ballydir=-ballydir
+  bally=122-ballsize
+  if ballx<padx+15 then
+   ballxdir=max(-5,ballxdir-1.2)
   else
-   ballxdir = min(5,ballxdir+1.2)
+   ballxdir=min(5,ballxdir+1.2)
   end
  end
 end
 
 function losedeadball()
- if bally > 128 then
-  lives -= 1
-  if lives >= 0 then
+ if bally>128 then
+  lives-=1
+  if lives>=0 then
    sfx(2)
    launchball()
   else
@@ -105,26 +106,27 @@ function losedeadball()
 end
 
 function moveball()
- ballx += ballxdir * ballspeed
- bally += ballydir * ballspeed
+ ballx+=ballxdir*ballspeed
+ bally+=ballydir*ballspeed
 end
 
 function movepaddle()
  if btn(⬅️) then
-  padx = max(1,padx-3)
+  padx=max(1,padx-3)
  elseif btn(➡️) then
-  padx = min(102,padx+3)
+  padx=min(102,padx+3)
  end
 end
 
 function randomxdir()
  return (rnd()-0.5)*5
 end
+
 -->8
 function _draw()
- if state == "start" then
+ if state=="start" then
   drawstart()
- elseif state == "gameover" then
+ elseif state=="gameover" then
   drawgameover()
  else
   drawrun()
@@ -132,7 +134,7 @@ function _draw()
 end
 
 function pcenter(text,y,c)
- local x = flr(65-#text*2)
+ local x=flr(65-#text*2)
  print(text,x,y,c)
 end
 
