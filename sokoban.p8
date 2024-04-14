@@ -252,7 +252,7 @@ function drw_clear()
   0,
   17,
   12,
-  player.x*8+offset.x+1,
+  player.x*8+offset.x+2,
   player.y*8+offset.y-12
  )
 end
