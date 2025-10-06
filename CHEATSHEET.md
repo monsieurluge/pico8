@@ -27,22 +27,36 @@ Online Manual: [link](https://www.lexaloffle.com/pico-8.php?page=manual)
 
 ## Command Line
 
+### Cartridge
+
 ```
-HELP
-SAVE <FILENAME>.P8
 LOAD <FILENAME>.P8/("NAME")
+SAVE <FILENAME>.P8
 RUN
-SPLORE
 IMPORT X.PNG
 EXPORT X.BIN/X.HTML
-LS()/DIR
+```
+
+### Directories and files
+
+```
 CD
-CLS
-SHUTDOWN
-REBOOT
-P/ENTER
 FOLDER
+LS()/DIR
 MKDIR<DIR_NAME>
+P/ENTER
+SHUTDOWN
+SPLORE
+```
+
+### System
+
+```
+EXIT()
+HELP
+REBOOT
+SHUTDOWN
+SPLORE
 ```
 
 ## Controls
@@ -97,7 +111,7 @@ END
 ### Array
 
 ```
-FOR S IN ALL (SHIPS) DO
+FOR S IN ALL(SHIPS) DO
   PRINT(S.NAME)
 END
 ```
@@ -175,6 +189,18 @@ SRND(X)
 #LIST
 "A".."B"
 ```
+
+### bitwise
+
+not: `~A`
+or: `A|B`
+and: `A&B`
+xor: `A^^B`
+shift left: `A<<B`
+arithmetic shift right: `A>>B`
+logical shift right: `A>>>B`
+rotate left: `A<<>B`
+rotate right: `A>><B`
 
 ## Palette
 
@@ -285,11 +311,15 @@ TONUM("123.45")
 
 ### concatenation
 
-```"HELLO"..4```
+```
+"HELLO"..4
+```
 
 ### length
 
-```#STRING```
+```
+#STRING
+```
 
 ## Tables
 
