@@ -351,9 +351,12 @@ function prepare_stages()
   stagesinfos[x]={}
   for y=1,6 do
    local nb=x+(y-1)*6
+   local lock=
+    selection.x!=x
+    or selection.y!=y
    stagesinfos[x][y]={
     done=false,
-    lock=nb>1,
+    lock=lock,
     mini=gen_stage_mini(x,y),
     name=stagesnames[nb],
     -- stage map offset
